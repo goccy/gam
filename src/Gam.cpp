@@ -546,6 +546,75 @@ void GamTexture::addToWorld(GamWorld *w)
 	body->SetUserData(data);
 }
 
+QList<GamVector> *GamTexture::detectHuman(GamTexture *background_)
+{
+	IplImage *src = ipl;
+	IplImage *background = background_->ipl;
+	CvMemStorage* storage = cvCreateMemStorage(0);
+	CvSeq* find_contour = NULL;
+	const int w = src->width;
+    const int h = src->height;
+	IplImage *imgResult = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 1);
+	IplImage *hsvImage = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 3);
+	IplImage *hueImage = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 1);
+	IplImage *saturationImage = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 1);
+	IplImage *valueImage = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 1);
+	IplImage *thresholdImage1 = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 1);
+	IplImage *thresholdImage2 = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 1);
+	IplImage *thresholdImage3 = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U, 1);
+	IplImage *grayImage = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U,1);
+	IplImage *differenceImage = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U,1);
+    IplImage *backgroundImage = cvCreateImage(cvSize(w, h), IPL_DEPTH_8U,1);
+	cvCvtColor(background, backgroundImage, CV_BGR2GRAY);
+	cvCvtColor(src, grayImage, CV_BGR2GRAY);
+	cvAbsDiff(grayImage, backgroundImage, differenceImage);
+	cvCvtColor(src, hsvImage, CV_BGR2HSV);
+	cvSplit(hsvImage, hueImage, saturationImage, valueImage, NULL);
+	cvThreshold(hueImage, thresholdImage1, 0, 255, CV_THRESH_BINARY);
+	cvThreshold(hueImage, thresholdImage2, 96, 255, CV_THRESH_BINARY_INV);
+	cvAnd(thresholdImage1, thresholdImage2, thresholdImage3, NULL);
+	cvAnd(differenceImage, thresholdImage3, imgResult, NULL);
+	cvErode(imgResult, imgResult, NULL, 1);
+	cvDilate(imgResult, imgResult, NULL, 1);
+
+	//=====================================================================//
+	IplImage *tmp_img = cvCreateImage(cvGetSize(imgResult), IPL_DEPTH_8U, 1);
+	cvThreshold(imgResult, tmp_img, 40, 255, CV_THRESH_BINARY);
+	cvDilate(tmp_img, tmp_img, NULL, 20);
+	cvFindContours(tmp_img, storage, &find_contour, sizeof(CvContour), CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+    cvDrawContours(src, find_contour, CV_RGB(255, 0, 0), CV_RGB(255, 0, 0), 1, 2, CV_AA, cvPoint(0, 0));
+	//=====================================================================//
+
+	QList<GamVector> *objs = new QList<GamVector>();
+	while (1) {
+		if (find_contour == NULL) break;
+		//fprintf(stderr, "=============START=============\n");
+		GamVector obj;
+		for (int i = 0; i < find_contour->total; i++) {
+			CvPoint *point = CV_GET_SEQ_ELEM(CvPoint, find_contour, i);
+			obj.push_back(Vec2f(point->x, point->y));
+		}
+		//fprintf(stderr, "=============END=============\n");
+		objs->append(obj);
+		if (find_contour->h_next == NULL) break;
+		find_contour = find_contour->h_next;
+	}
+	cvReleaseImage(&imgResult);
+	cvReleaseImage(&hsvImage);
+	cvReleaseImage(&hueImage);
+	cvReleaseImage(&saturationImage);
+	cvReleaseImage(&valueImage);
+	cvReleaseImage(&thresholdImage1);
+	cvReleaseImage(&thresholdImage2);
+	cvReleaseImage(&thresholdImage3);
+	cvReleaseImage(&grayImage);
+	cvReleaseImage(&differenceImage);
+    cvReleaseImage(&backgroundImage);
+	cvReleaseImage(&tmp_img);
+	cvReleaseMemStorage(&storage);
+	return objs;
+}
+
 /*
 #include <legacy/legacy.hpp>
 typedef struct parameter Parameter;
@@ -729,6 +798,13 @@ void GamWorld::start()
 	}
 }
 
+template<class T>
+inline void removeWorld(GamWorld *world, T o)
+{
+	b2Body *body = o->body;
+	world->world->DestroyBody(body);
+}
+
 #define addWorld(T, o) ((T)o)->addToWorld(this)
 
 void GamWorld::add(GamObject *o)
@@ -756,6 +832,32 @@ void GamWorld::add(GamObject *o)
 		fprintf(stderr, "World: [WARNING] UNNOWN OBJECT\n");
 		break;
 	}
+}
+
+void GamWorld::remove(GamObject *o)
+{
+	switch (o->tag()) {
+	case GamRectTag:
+		removeWorld(this, (GamRect *)o);
+	case GamEllipseTag:
+		removeWorld(this, (GamEllipse *)o);
+		break;
+	case GamTextureTag:
+		removeWorld(this, (GamTexture *)o);
+		break;
+	case GamTextTag:
+		removeWorld(this, (GamText *)o);
+		break;
+	case GamLineTag:
+		removeWorld(this, (GamLine *)o);
+		break;
+	case GamComplexItemTag:
+		removeWorld(this, (GamComplexItem *)o);
+		break;
+	default:
+		fprintf(stderr, "World: [WARNING] UNNOWN OBJECT\n");
+	}
+
 }
 
 void GamWorld::timerEvent(QTimerEvent *event)

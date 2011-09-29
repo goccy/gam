@@ -6,6 +6,20 @@
 #include <iostream>
 using namespace std;
 
+class Vec2f {
+public:
+	float x;
+	float y;
+	Vec2f() {
+		this->x = 0;
+		this->y = 0;
+	};
+	Vec2f(float x, float y) {
+		this->x = x;
+		this->y = y;
+	}
+};
+
 typedef enum {
 	GamRectTag,
 	GamEllipseTag,
@@ -63,6 +77,7 @@ public:
 
 	GamWorld(GamScene *scene);
 	void add(GamObject *o);
+	void remove(GamObject *o);
 	void start(void);
 	void joint(void);
 	void timerEvent(QTimerEvent *event);
@@ -131,7 +146,7 @@ public:
 	void addToWorld(GamWorld *w);
 };
 
-typedef QList<QList<GamPoint*>*> ObjPointList;
+typedef std::vector<Vec2f> GamVector;
 
 class GamTexture : public QObject, public GamObject, public QGraphicsPixmapItem, public GamRigidBody {
 	Q_OBJECT;
@@ -151,6 +166,7 @@ public:
 	GamTexture(QPixmap *image);
 	void setTrackData(const char *filepath);
 	void setConnect(void);
+	QList<GamVector> *detectHuman(GamTexture *background);
 	QList<GamTexture*> *split(int row, int col);
 	void setRectShape(GamRect *r);
 	void setColor(QColor *c);
@@ -221,20 +237,6 @@ public:
 	GamGroup();
 	GamPoint *getCenter(void);
 	void setSize(float width_, float height_);
-};
-
-class Vec2f {
-public:
-	float x;
-	float y;
-	Vec2f() {
-		this->x = 0;
-		this->y = 0;
-	};
-	Vec2f(float x, float y) {
-		this->x = x;
-		this->y = y;
-	}
 };
 
 typedef struct {
