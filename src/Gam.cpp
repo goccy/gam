@@ -71,6 +71,12 @@ GamRect::GamRect(int x_, int y_, int width_, int height_)
 	isStatic = true;
 }
 
+void GamRect::setTexture(GamTexture *t)
+{
+	QPixmap p = t->pixmap();
+	QBrush b(p);
+	setBrush(b);
+}
 
 GamPoint *GamRect::getCenter(void)
 {

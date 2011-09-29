@@ -90,6 +90,7 @@ public:
 	void setRestitution(qreal restitution_);
 	void setBullet(bool bullet_);
 };
+class GamTexture;
 
 class GamRect : public QObject, public GamObject, public QGraphicsRectItem, public GamRigidBody {
 	Q_OBJECT;
@@ -105,6 +106,7 @@ public:
 
 	GamRect(int x, int y, int width, int height);
 	void addToWorld(GamWorld *w);
+	void setTexture(GamTexture *t);
 	GamPoint *getCenter(void);
 	void setSize(float width_, float height_);
 	~GamRect(void);
