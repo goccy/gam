@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/444/trunk/konoha/package/konoha.gwt/lib/triangle++/include
+END
+dpoint.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/!svn/ver/444/trunk/konoha/package/konoha.gwt/lib/triangle++/include/dpoint.hpp
+END
+assert.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/!svn/ver/444/trunk/konoha/package/konoha.gwt/lib/triangle++/include/assert.hpp
+END
+del_interface.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/!svn/ver/444/trunk/konoha/package/konoha.gwt/lib/triangle++/include/del_interface.hpp
+END
+triangle.h
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/!svn/ver/444/trunk/konoha/package/konoha.gwt/lib/triangle++/include/triangle.h
+END
+triangle_impl.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/!svn/ver/444/trunk/konoha/package/konoha.gwt/lib/triangle++/include/triangle_impl.hpp
+END
