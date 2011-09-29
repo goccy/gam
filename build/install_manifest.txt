@@ -1,2 +1,0 @@
-/usr/local/lib/libgam.dylib
-/usr/local/include/gam.hpp

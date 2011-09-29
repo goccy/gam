@@ -1,2 +1,0 @@
-/usr/bin/ar cr libtriangle.a  CMakeFiles/triangle.dir/lib/triangle++/src/assert.cpp.o CMakeFiles/triangle.dir/lib/triangle++/src/del_impl.cpp.o CMakeFiles/triangle.dir/lib/triangle++/src/main.cpp.o
-/usr/bin/ranlib libtriangle.a

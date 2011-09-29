@@ -1,2 +1,0 @@
-/Users/goccy/.konoha/package/1.0/konoha.gwt/lib/gam/build/CMakeFiles/libgam.dir
-/Users/goccy/.konoha/package/1.0/konoha.gwt/lib/gam/build/CMakeFiles/triangle.dir
