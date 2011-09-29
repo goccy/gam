@@ -7,12 +7,12 @@
 using namespace std;
 
 typedef enum {
-	GRect,
-	GEllipse,
-	GTexture,
-	GText,
-	GLine,
-	GComplexItem,
+	GamRectTag,
+	GamEllipseTag,
+	GamTextureTag,
+	GamTextTag,
+	GamLineTag,
+	GamComplexItemTag,
 } GamClassDef;
 
 class GamObject {
@@ -124,6 +124,7 @@ public:
 	GamEllipse();
 	void setRectShape(GamRect *r);
 	void setPosition(int x_, int y_);
+	void setGlow(void);
 	void setGlowCenterColor(QColor *color);
 	void addToWorld(GamWorld *w);
 };
@@ -257,6 +258,24 @@ public:
 	void setColor(QColor *c);
 	~GamComplexItem(void);
 	void addToWorld(GamWorld *w);
+};
+
+class GamCapture {
+public:
+	CvCapture *capture;
+
+	QImage *convertFromIplImageToQImage(const IplImage *ipl, double min, double max);
+	GamTexture *queryFrame(void);
+};
+
+class GamCamera : public GamCapture {
+public:
+	GamCamera(int n);
+};
+
+class GamVideo : public GamCapture {
+public:
+	GamVideo(const char *filename);
 };
 
 extern "C" std::vector<Triangle> triangulate(const std::vector<Vec2f> & points, float resolution);

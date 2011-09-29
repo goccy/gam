@@ -26,7 +26,7 @@ void PhysicsWorld::addStaticObject(void)
 	GamEllipse *e = new GamEllipse();
 	e->setRectShape(new GamRect(300, 300, 20, 20));
 	e->setBrush(QColor("#999900"));
-	//e.setGlow();
+	e->setGlow();
 	ground->setRestitution(0);
 	scene->addItem(ground);
 	scene->addItem(left_block);
@@ -42,7 +42,6 @@ void PhysicsWorld::addDynamicObject(void)
 {
 	srand((unsigned)time(NULL));
 	for (int i = 0; i < 100; i++) {
-		//int r = Int.random(100);
 		int r = rand() % 100;
 		GamRect *rect = new GamRect(350 - r, 300 - r, 10, 10);
 		rect->setDensity(1);
@@ -60,15 +59,15 @@ void PhysicsWorld::addDynamicObject(void)
 	GamText *text = new GamText("Hello World");
 	text->setPosition(300, 100);
 	text->setDensity(1.0);
-	//Texture texture = new Texture("sample/qt.jpg");
-	//texture.setRectShape(new Rect(200, 200, 50, 50));
-	//texture.setDensity(1);
+	GamTexture *texture = new GamTexture("qt.jpg");
+	texture->setRectShape(new GamRect(200, 200, 50, 50));
+	texture->setDensity(1);
 	world->add(e);
 	scene->addItem(e);
 	world->add(text);
 	scene->addItem(text);
-	//world.add(texture);
-	//scene.addItem(texture);
+	world->add(texture);
+	scene->addItem(texture);
 }
 
 void PhysicsWorld::show(void)
@@ -79,14 +78,46 @@ void PhysicsWorld::show(void)
 	world->start();
 }
 
+char *PhysicsWorld::getRandomColor(void)
+{
+	char *color = (char *)malloc(8);
+	memset(color, 0, 8);
+	int r = rand() % 206 + 50;
+	int g = rand() % 206 + 50;
+	int b = rand() % 206 + 50;
+	snprintf(color, 8, "#%x%x%x", r, g, b);
+	return color;
+}
+
+void PhysicsWorld::changeColor(GamObject *o_)
+{
+	switch (o_->tag()) {
+	case GamRectTag: {
+		GamRect *o = (GamRect *)o_;
+		if (o->isStatic) break;
+		o->setBrush(QColor(getRandomColor()));
+		break;
+	}
+	case GamEllipseTag: {
+		GamEllipse *o = (GamEllipse *)o_;
+		if (o->isStatic) break;
+		o->setBrush(QColor(getRandomColor()));
+		break;
+	}
+	default:
+		break;
+	}
+}
+
 void PhysicsWorld::beginContactEvent(GamObject *o1, GamObject *o2)
 {
-	fprintf(stderr, "beginContactEvent!!\n");
+	changeColor(o1);
+	changeColor(o2);
 }
 
 void PhysicsWorld::endContactEvent(GamObject *o1, GamObject *o2)
 {
-	fprintf(stderr, "endContactEvent!!\n");
+	//fprintf(stderr, "endContactEvent!!\n");
 }
 
 int main(int argc, char **argv)

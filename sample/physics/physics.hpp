@@ -8,6 +8,8 @@ public:
 	QGraphicsView *view;
 
 	PhysicsWorld(void);
+	char *getRandomColor(void);
+	void changeColor(GamObject *o);
 	void addStaticObject(void);
 	void addDynamicObject(void);
 	void show(void);

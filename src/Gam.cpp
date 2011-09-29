@@ -65,7 +65,7 @@ GamRect::GamRect(int x_, int y_, int width_, int height_)
 	isDrag = false;
 	setRect(*r);
 	setObjectName("GamRect");
-	setTag(GRect);
+	setTag(GamRectTag);
 	se = NULL;
 	body = NULL;
 	isStatic = true;
@@ -107,10 +107,11 @@ void GamRect::addToWorld(GamWorld *w)
 	body->CreateFixture(&shapeDef);
 	body->SetBullet(bullet);
 	//QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
-	QGraphicsItem *i = (QGraphicsItem *)this;
 	GamObject *data = new GamObject();
+	QGraphicsItem *i = (QGraphicsItem *)this;
 	data->i = i;
-	data->userdata = this;
+	GamObject *o = (GamObject *)this;
+	data->userdata = o;
 	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
 	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
 	//CTX lctx = knh_getCurrentContext();
@@ -134,7 +135,7 @@ GamEllipse::GamEllipse()
 {
 	setObjectName("GamEllipse");
 	isDrag = false;
-	setTag(GEllipse);
+	setTag(GamEllipseTag);
 	glow_center_color = new QColor("white");
 	isStatic = true;
 }
@@ -144,6 +145,38 @@ void GamEllipse::setPosition(int x_, int y_)
 	x = x_;
 	y = y_;
 	setPos(x, y);
+}
+
+void GamEllipse::setGlow(void)
+{
+	setPen(Qt::NoPen);
+	QColor c = brush().color();
+	int orig_center_x = x + width / 2;
+	int orig_center_y = y + height / 2;
+	int spread = width * 4;
+	double default_size = 1 / 4.0f;
+	int center_x = x + spread / 2;
+	int center_y = y + spread / 2;
+	int div_x = orig_center_x - center_x;
+	int div_y = orig_center_y - center_y;
+	setRect(QRect(x + div_x, y + div_y, spread, spread));
+	QRadialGradient radial(orig_center_x, orig_center_y, spread/2);
+	QColor c1(c);
+	c1.setAlpha(0x99);
+	QColor c2(c);
+	c2.setAlpha(0x44);
+	QColor c3(c);
+	c3.setAlpha(0x33);
+	QColor c4(c);
+	c4.setAlpha(0x00);
+	//c4.setAlpha(0x11);
+	radial.setColorAt(default_size * 0.4, *glow_center_color);
+	radial.setColorAt(default_size * 0.8, c1);
+	radial.setColorAt(default_size, c2);
+	radial.setColorAt(default_size * 1.0, c3);
+	//radial.setColorAt(default_size * 1.5, c3);
+	radial.setColorAt(1.0, c4);
+	setBrush(QBrush(radial));
 }
 
 void GamEllipse::setGlowCenterColor(QColor *c)
@@ -172,7 +205,6 @@ void GamEllipse::addToWorld(GamWorld *w)
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
 
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
 	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
 	//CTX lctx = knh_getCurrentContext();
@@ -180,8 +212,10 @@ void GamEllipse::addToWorld(GamWorld *w)
 	//data->o = i;
 	//data->self = this;
 	GamObject *data = new GamObject();
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	GamObject *o = (GamObject *)this;
 	data->i = i;
-	data->userdata = this;
+	data->userdata = o;
 	body->SetUserData(data);
 }
 
@@ -203,7 +237,7 @@ GamText::GamText(QString text)
 	//TODO
 	width = text.size() * 7;
 	height = 10;
-	setTag(GText);
+	setTag(GamTextTag);
 	isStatic = true;
 }
 
@@ -233,7 +267,6 @@ void GamText::addToWorld(GamWorld *w)
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
 
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
 	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
 	//CTX lctx = knh_getCurrentContext();
@@ -241,8 +274,10 @@ void GamText::addToWorld(GamWorld *w)
 	//data->o = i;
 	//data->self = this;
 	GamObject *data = new GamObject();
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	GamObject *o = (GamObject *)this;
 	data->i = i;
-	data->userdata = this;
+	data->userdata = o;
 	body->SetUserData(data);
 }
 
@@ -278,7 +313,7 @@ GamComplexItem::GamComplexItem(const std::vector<Vec2f> &pts, int size)
 		//fprintf(stderr, "(%f, %f), (%f, %f), (%f, %f)\n", triIt->a.x, triIt->a.y, triIt->b.x, triIt->b.y, triIt->c.x, triIt->c.y);
 	}
 	isDrag = false;
-	setTag(GComplexItem);
+	setTag(GamComplexItemTag);
 	setObjectName("GamComplexItem");
 	isStatic = true;
 }
@@ -324,7 +359,6 @@ void GamComplexItem::addToWorld(GamWorld *w)
 		body->CreateFixture(&shapeDef);
 	}
 	body->SetBullet(bullet);
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
 	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
 	//CTX lctx = knh_getCurrentContext();
@@ -332,8 +366,10 @@ void GamComplexItem::addToWorld(GamWorld *w)
 	//data->o = i;
 	//data->self = this;
 	GamObject *data = new GamObject();
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	GamObject *o = (GamObject *)this;
 	data->i = i;
-	data->userdata = this;
+	data->userdata = o;
 	body->SetUserData(data);
 }
 
@@ -366,6 +402,7 @@ GamTexture::GamTexture(const char *filepath_)
 	setConnect();
 	isStatic = true;
 	ipl = NULL;
+	setTag(GamTextureTag);
 	//setTrackData(filepath_);
 }
 
@@ -380,6 +417,7 @@ GamTexture::GamTexture(QImage *image)
 	setConnect();
 	isStatic = true;
 	ipl = NULL;
+	setTag(GamTextureTag);
 	//setTrackData();
 }
 
@@ -393,6 +431,7 @@ GamTexture::GamTexture(QPixmap *image)
 	setConnect();
 	isStatic = true;
 	ipl = NULL;
+	setTag(GamTextureTag);
 	//setTrackData();
 }
 
@@ -487,7 +526,6 @@ void GamTexture::addToWorld(GamWorld *w)
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
 
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
 	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
 	//CTX lctx = knh_getCurrentContext();
@@ -495,8 +533,10 @@ void GamTexture::addToWorld(GamWorld *w)
 	//data->o = i;
 	//data->self = this;
 	GamObject *data = new GamObject();
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	GamObject *o = (GamObject *)this;
 	data->i = i;
-	data->userdata = this;
+	data->userdata = o;
 	body->SetUserData(data);
 }
 
@@ -560,7 +600,7 @@ GamLine::GamLine(int x1_, int y1_, int x2_, int y2_)
 	l = new QLine(x1_, y1_, x2_, y2_);
 	setLine(*l);
 	setObjectName("GamLine");
-	setTag(GLine);
+	setTag(GamLineTag);
 	isStatic = true;
 }
 
@@ -583,8 +623,6 @@ void GamLine::addToWorld(GamWorld *w)
 	shapeDef.friction = friction;
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
-
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
 	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
 	//CTX lctx = knh_getCurrentContext();
@@ -592,8 +630,10 @@ void GamLine::addToWorld(GamWorld *w)
 	//data->o = i;
 	//data->self = this;
 	GamObject *data = new GamObject();
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	GamObject *o = (GamObject *)this;
 	data->i = i;
-	data->userdata = this;
+	data->userdata = o;
 	body->SetUserData(data);
 }
 
@@ -688,22 +728,22 @@ void GamWorld::start()
 void GamWorld::add(GamObject *o)
 {
 	switch (o->tag()) {
-	case GRect:
+	case GamRectTag:
 		addWorld(GamRect *, o);
 		break;
-	case GEllipse:
+	case GamEllipseTag:
 		addWorld(GamEllipse *, o);
 		break;
-	case GTexture:
+	case GamTextureTag:
 		addWorld(GamTexture *, o);
 		break;
-	case GText:
+	case GamTextTag:
 		addWorld(GamText *, o);
 		break;
-	case GLine:
+	case GamLineTag:
 		addWorld(GamLine *, o);
 		break;
-	case GComplexItem:
+	case GamComplexItemTag:
 		addWorld(GamComplexItem *, o);
 		break;
 	default:
@@ -728,6 +768,146 @@ void GamWorld::timerEvent(QTimerEvent *event)
 	scene->update(scene->sceneRect());
 	QObject::timerEvent(event);
 }
+
+
+//===================================== GamCapture =============================================//
+QImage *GamCapture::convertFromIplImageToQImage(const IplImage * iplImage, double mini, double maxi)
+{
+	int width = iplImage->width;
+	int widthStep = iplImage->widthStep;
+	int height = iplImage->height;
+	uchar *qImageBuffer = NULL;
+	switch (iplImage->depth) {
+	case IPL_DEPTH_8U:
+		if (iplImage->nChannels == 1) {
+			qImageBuffer = (uchar *)malloc(width * height * sizeof(uchar));
+			uchar *QImagePtr = qImageBuffer;
+			const uchar *iplImagePtr = (const uchar *)iplImage->imageData;
+			for (int y = 0; y < height; y++) {
+				memcpy(QImagePtr, iplImagePtr, width);
+				QImagePtr += width;
+				iplImagePtr += widthStep;
+			}
+		} else if (iplImage->nChannels == 3) {
+			qImageBuffer = (uchar *)malloc(width * height * 4 * sizeof(uchar));
+			uchar *QImagePtr = qImageBuffer;
+			const uchar *iplImagePtr = (const uchar *)iplImage->imageData;
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					QImagePtr[0] = iplImagePtr[0];
+					QImagePtr[1] = iplImagePtr[1];
+					QImagePtr[2] = iplImagePtr[2];
+					QImagePtr[3] = 0;
+					QImagePtr += 4;
+					iplImagePtr += 3;
+				}
+				iplImagePtr += widthStep-3*width;
+			}
+		} else {
+			qDebug("IplImageToQImage: image format is not supported:\
+						depth=8U and %d channels\n", iplImage->nChannels);
+		}
+		break;
+	case IPL_DEPTH_16U:
+		if (iplImage->nChannels == 1) {
+			qImageBuffer = (uchar *)malloc(width * height * sizeof(uchar));
+			uchar *QImagePtr = qImageBuffer;
+			const uint16_t *iplImagePtr = (const uint16_t *)iplImage->imageData;
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					*QImagePtr++ = ((*iplImagePtr++) >> 8);
+				}
+				iplImagePtr += widthStep/sizeof(uint16_t)-width;
+			}
+		} else {
+			qDebug("IplImageToQImage: image format is not supported:\
+						depth=16U and %d channels\n", iplImage->nChannels);
+		}
+		break;
+	case IPL_DEPTH_32F:
+		if (iplImage->nChannels == 1) {
+			qImageBuffer = (uchar *)malloc(width * height * sizeof(uchar));
+			uchar *QImagePtr = qImageBuffer;
+			const float *iplImagePtr = (const float *)iplImage->imageData;
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					uchar p;
+					float pf = 255 * ((*iplImagePtr++) - mini) / (maxi - mini);
+					if (pf < 0) p = 0;
+					else if (pf > 255) p = 255;
+					else p = (uchar) pf;
+					*QImagePtr++ = p;
+				}
+				iplImagePtr += widthStep/sizeof(float)-width;
+			}
+		} else {
+			qDebug("IplImageToQImage: image format is not supported:\
+						depth=32F and %d channels\n", iplImage->nChannels);
+		}
+		break;
+	case IPL_DEPTH_64F:
+		if (iplImage->nChannels == 1) {
+			qImageBuffer = (uchar *)malloc(width * height * sizeof(uchar));
+			uchar *QImagePtr = qImageBuffer;
+			const double *iplImagePtr = (const double *)iplImage->imageData;
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					uchar p;
+					double pf = 255 * ((*iplImagePtr++) - mini) / (maxi - mini);
+					if (pf < 0) p = 0;
+					else if (pf > 255) p = 255;
+					else p = (uchar) pf;
+					*QImagePtr++ = p;
+				}
+				iplImagePtr += widthStep/sizeof(double)-width;
+			}
+		} else {
+			qDebug("IplImageToQImage: image format is not supported:\
+						depth=64F and %d channels\n", iplImage->nChannels);
+		}
+		break;
+	default:
+		qDebug("IplImageToQImage: image format is not supported: depth=%d\
+					and %d channels\n", iplImage->depth, iplImage->nChannels);
+		break;
+	}
+	QImage *qImage;
+	if (iplImage->nChannels == 1) {
+		QVector<QRgb> colorTable;
+		for (int i = 0; i < 256; i++) {
+			colorTable.push_back(qRgb(i, i, i));
+		}
+		qImage = new QImage(qImageBuffer, width, height, QImage::Format_Indexed8);
+		qImage->setColorTable(colorTable);
+	} else {
+		qImage = new QImage(qImageBuffer, width, height, QImage::Format_RGB32);
+	}
+	free(qImageBuffer);
+	return qImage;
+}
+
+GamTexture *GamCapture::queryFrame(void)
+{
+	IplImage *frame = cvQueryFrame(capture);//not allocated
+	QImage *image = convertFromIplImageToQImage(frame, 0.0, 0.0);
+	GamTexture *texture = new GamTexture(image);
+	texture->ipl = cvCloneImage(frame);//save image of iplimage version
+	delete image;
+	return texture;
+}
+
+//========================================= GamCamera ==============================================//
+GamCamera::GamCamera(int n)
+{
+	capture = cvCaptureFromCAM(n);
+}
+
+//========================================== GamVideo ==============================================//
+GamVideo::GamVideo(const char *filename)
+{
+	capture = cvCaptureFromAVI(filename);
+}
+
 
 #include <del_interface.hpp>
 //====================== Written by Takuma Wakamori =========================//
