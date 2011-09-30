@@ -24,6 +24,12 @@ GamRigidBody::GamRigidBody()
 	friction = 0.0f;
 	restitution = 0.0f;
 	bullet = false;
+	body_userdata = new GamObject();
+}
+
+void GamRigidBody::setBodyUserData(void *userdata)
+{
+	body_userdata->userdata = userdata;
 }
 
 void GamRigidBody::setRot(qreal rotation)
@@ -69,6 +75,10 @@ GamRect::GamRect(int x_, int y_, int width_, int height_)
 	se = NULL;
 	body = NULL;
 	isStatic = true;
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 }
 
 void GamRect::setTexture(GamTexture *t)
@@ -112,19 +122,7 @@ void GamRect::addToWorld(GamWorld *w)
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
 	body->SetBullet(bullet);
-	//QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
-	GamObject *data = new GamObject();
-	QGraphicsItem *i = (QGraphicsItem *)this;
-	data->i = i;
-	GamObject *o = (GamObject *)this;
-	data->userdata = o;
-	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
-	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
-	//CTX lctx = knh_getCurrentContext();
-	//data->ct = getClassTBL(Rect);
-	//data->o = i;
-	//data->self = this;
-	body->SetUserData(data);
+	body->SetUserData(body_userdata);
 }
 
 GamRect::~GamRect(void)
@@ -144,6 +142,10 @@ GamEllipse::GamEllipse()
 	setTag(GamEllipseTag);
 	glow_center_color = new QColor("white");
 	isStatic = true;
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 }
 
 void GamEllipse::setPosition(int x_, int y_)
@@ -210,19 +212,7 @@ void GamEllipse::addToWorld(GamWorld *w)
 	shapeDef.friction = friction;
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
-
-	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
-	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
-	//CTX lctx = knh_getCurrentContext();
-	//data->ct = getClassTBL(Ellipse);
-	//data->o = i;
-	//data->self = this;
-	GamObject *data = new GamObject();
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
-	GamObject *o = (GamObject *)this;
-	data->i = i;
-	data->userdata = o;
-	body->SetUserData(data);
+	body->SetUserData(body_userdata);
 }
 
 void GamEllipse::setRectShape(GamRect *r)
@@ -245,6 +235,10 @@ GamText::GamText(QString text)
 	height = 10;
 	setTag(GamTextTag);
 	isStatic = true;
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 }
 
 void GamText::setPosition(int x_, int y_)
@@ -272,19 +266,7 @@ void GamText::addToWorld(GamWorld *w)
 	shapeDef.friction = friction;
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
-
-	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
-	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
-	//CTX lctx = knh_getCurrentContext();
-	//data->ct = getClassTBL(Text);
-	//data->o = i;
-	//data->self = this;
-	GamObject *data = new GamObject();
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
-	GamObject *o = (GamObject *)this;
-	data->i = i;
-	data->userdata = o;
-	body->SetUserData(data);
+	body->SetUserData(body_userdata);
 }
 
 //================================== ComplexItem =============================================//
@@ -292,17 +274,6 @@ GamComplexItem::GamComplexItem(const std::vector<Vec2f> &pts, int size)
 {
 	x = 0;
 	y = 0;
-	/*
-	int asize = knh_Array_size(a);
-	std::vector<Vec2f> pts;
-	for (int i = 0; i < asize; i++) {
-		knh_RawPtr_t *o = (knh_RawPtr_t *)a->list[i];
-		GamPoint *p = (GamPoint *)o->rawptr;
-		pts.push_back(Vec2f(p->x, p->y));
-		//delete p;
-		//fprintf(stderr, "(x, y) = (%d, %d)\n", p->x, p->y);
-	}
-	*/
 	std::vector<Triangle> tris = triangulate(pts, (float)size);
 	gp_list = new QList<QGraphicsPolygonItem *>();
 	for (std::vector<Triangle>::iterator triIt = tris.begin(); triIt != tris.end(); ++triIt) {
@@ -322,6 +293,10 @@ GamComplexItem::GamComplexItem(const std::vector<Vec2f> &pts, int size)
 	setTag(GamComplexItemTag);
 	setObjectName("GamComplexItem");
 	isStatic = true;
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 }
 
 GamComplexItem::~GamComplexItem(void)
@@ -365,18 +340,7 @@ void GamComplexItem::addToWorld(GamWorld *w)
 		body->CreateFixture(&shapeDef);
 	}
 	body->SetBullet(bullet);
-	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
-	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
-	//CTX lctx = knh_getCurrentContext();
-	//data->ct = getClassTBL(Texture);
-	//data->o = i;
-	//data->self = this;
-	GamObject *data = new GamObject();
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
-	GamObject *o = (GamObject *)this;
-	data->i = i;
-	data->userdata = o;
-	body->SetUserData(data);
+	body->SetUserData(body_userdata);
 }
 
 void GamComplexItem::setColor(QColor *c)
@@ -409,6 +373,10 @@ GamTexture::GamTexture(const char *filepath_)
 	isStatic = true;
 	ipl = NULL;
 	setTag(GamTextureTag);
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 	//setTrackData(filepath_);
 }
 
@@ -424,6 +392,10 @@ GamTexture::GamTexture(QImage *image)
 	isStatic = true;
 	ipl = NULL;
 	setTag(GamTextureTag);
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 	//setTrackData();
 }
 
@@ -438,6 +410,10 @@ GamTexture::GamTexture(QPixmap *image)
 	isStatic = true;
 	ipl = NULL;
 	setTag(GamTextureTag);
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 	//setTrackData();
 }
 
@@ -531,19 +507,7 @@ void GamTexture::addToWorld(GamWorld *w)
 	shapeDef.friction = friction;
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
-
-	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
-	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
-	//CTX lctx = knh_getCurrentContext();
-	//data->ct = getClassTBL(Texture);
-	//data->o = i;
-	//data->self = this;
-	GamObject *data = new GamObject();
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
-	GamObject *o = (GamObject *)this;
-	data->i = i;
-	data->userdata = o;
-	body->SetUserData(data);
+	body->SetUserData(body_userdata);
 }
 
 QList<GamVector> *GamTexture::detectHuman(GamTexture *background_)
@@ -677,6 +641,10 @@ GamLine::GamLine(int x1_, int y1_, int x2_, int y2_)
 	setObjectName("GamLine");
 	setTag(GamLineTag);
 	isStatic = true;
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 }
 
 void GamLine::addToWorld(GamWorld *w)
@@ -698,18 +666,7 @@ void GamLine::addToWorld(GamWorld *w)
 	shapeDef.friction = friction;
 	shapeDef.restitution = restitution;
 	body->CreateFixture(&shapeDef);
-	//knh_GraphicsUserData_t *data = (knh_GraphicsUserData_t *)malloc(sizeof(knh_GraphicsUserData_t));
-	//memset(data, 0, sizeof(knh_GraphicsUserData_t));
-	//CTX lctx = knh_getCurrentContext();
-	//data->ct = getClassTBL(Texture);
-	//data->o = i;
-	//data->self = this;
-	GamObject *data = new GamObject();
-	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
-	GamObject *o = (GamObject *)this;
-	data->i = i;
-	data->userdata = o;
-	body->SetUserData(data);
+	body->SetUserData(body_userdata);
 }
 
 //=================================== GamContact ==============================================//
@@ -1002,6 +959,11 @@ GamTexture *GamCapture::queryFrame(void)
 	texture->ipl = cvCloneImage(frame);//save image of iplimage version
 	delete image;
 	return texture;
+}
+
+GamCapture::~GamCapture(void)
+{
+	cvReleaseCapture(&capture);
 }
 
 //========================================= GamCamera ==============================================//

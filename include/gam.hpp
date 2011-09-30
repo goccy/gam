@@ -97,8 +97,10 @@ public:
 	qreal density;
 	qreal restitution;
 	bool bullet;
+	GamObject *body_userdata;
 
 	GamRigidBody(void);
+	void setBodyUserData(void *userdata);
 	void setRot(qreal rotation_);
 	void setDensity(qreal density_);
 	void setFriction(qreal friction_);
@@ -270,6 +272,7 @@ public:
 
 	QImage *convertFromIplImageToQImage(const IplImage *ipl, double min, double max);
 	GamTexture *queryFrame(void);
+	~GamCapture(void);
 };
 
 class GamCamera : public GamCapture {
