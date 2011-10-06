@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+`qmake -project`;
+`qmake`;
+open(IN, "Makefile");
+open(OUT, "> tmp.mk");
+while ($line = <IN>) {
+	if ($line =~ /INCPATH/) {
+		$line =~ s/\n//g;
+		$line .= " -I/usr/local/include/ -I/usr/local/include/opencv/ -I/usr/local/include/Box2D/\n";
+	} elsif ($line =~ /LIBS/) {
+		$line =~ s/\n//g;
+		$line .= " -L/usr/local/lib/ -lgam\n";
+	}
+	print(OUT $line);
+}
+close(IN);
+close(OUT);
+`mv tmp.mk Makefile`;
