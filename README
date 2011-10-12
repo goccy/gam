@@ -7,4 +7,11 @@ $ mkdir build
 $ cd build
 $ cmake ../
 $ make
-$ make install // ==> copied to /usr/local/lib/libgam.{dylib, so, dll} & /usr/local/include/gam.hpp
+$ make install
+==> copied to /usr/local/lib/libgam.{dylib, so, dll} & /usr/local/include/gam.hpp & /usr/local/bin/gamake
+
+### Hello Gam Application
+$ cd sample/physics
+$ gamake
+$ make
+$ open physics.app or ./physics.exe
