@@ -1,0 +1,194 @@
+#include <gam.hpp>
+
+GamGL::GamGL() : mRatio(1.0f)
+{
+	startTimer(1000 / 40.0f);
+}
+
+GamGL::GamGL(float32 ratio) : mRatio(ratio)
+{
+
+}
+
+void GamGL::show(void)
+{
+	startTimer(1000 / 40.0f);
+	QGLWidget::show();
+}
+
+void GamGL::initializeGL(void)
+{
+	glClearColor(0x00, 0x00, 0x00, 0x00);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+}
+
+void GamGL::DrawPolygon(const b2Vec2* old_vertices, int32 vertexCount, const b2Color& color)
+{
+	//glBegin(GL_QUADS);
+	//fprintf(stderr, "====== drawPolygon ====\n");
+	//fprintf(stderr, "vertexCount = [%d]\n", vertexCount);
+	//fprintf(stderr, "color[r,g,b] = [%f, %f, %f]\n", color.r, color.g, color.b);
+	b2Vec2 vertices[vertexCount];
+	for (int i = 0; i < vertexCount; i++) {
+		vertices[i] = old_vertices[i];
+		vertices[i] *= mRatio;
+		vertices[i].x /= 600;
+		vertices[i].y /= 600;
+		fprintf(stderr, "(x, y) = [%f, %f]\n", vertices[i].x, vertices[i].y);
+	}
+	glColor4f(color.r, color.g, color.b,1);
+	glVertexPointer(2, GL_FLOAT, 0, vertices);
+	glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
+}
+
+void GamGL::DrawSolidPolygon(const b2Vec2* old_vertices, int32 vertexCount, const b2Color& color)
+{
+	//fprintf(stderr, "====== drawSolidPolygon =====\n");
+	//fprintf(stderr, "vertexCount = [%d]\n", vertexCount);
+	//fprintf(stderr, "color[r,g,b] = [%f, %f, %f]\n", color.r, color.g, color.b);
+	b2Vec2 vertices[vertexCount];
+	for (int i = 0; i < vertexCount; i++) {
+		vertices[i] = old_vertices[i];
+		vertices[i] *= mRatio;
+		vertices[i].x /= 600;
+		vertices[i].y /= 600;
+	}
+	glVertexPointer(2, GL_FLOAT, 0, vertices);
+	glColor4f(color.r*0.5f, color.g*0.5f, color.b*0.5f,0.5f);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+	glColor4f(color.r, color.g, color.b,1);
+	glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
+}
+
+void GamGL::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color)
+{
+	fprintf(stderr, "drawCircle\n");
+	const float32 k_segments = 16.0f;
+	int vertexCount=16;
+	const float32 k_increment = 2.0f * b2_pi / k_segments;
+	float32 theta = 0.0f;
+	GLfloat glVertices[vertexCount*2];
+	for (int32 i = 0; i < k_segments; ++i) {
+		b2Vec2 v = center + radius * b2Vec2(cosf(theta), sinf(theta));
+		glVertices[i*2]=v.x * mRatio;
+		glVertices[i*2+1]=v.y * mRatio;
+		theta += k_increment;
+	}
+	glColor4f(color.r, color.g, color.b,1);
+	glVertexPointer(2, GL_FLOAT, 0, glVertices);
+	glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
+}
+
+void GamGL::DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color)
+{
+	fprintf(stderr, "DrawSolidCircle\n");
+	const float32 k_segments = 16.0f;
+	int vertexCount=16;
+	const float32 k_increment = 2.0f * b2_pi / k_segments;
+	float32 theta = 0.0f;
+	GLfloat glVertices[vertexCount*2];
+	for (int32 i = 0; i < k_segments; ++i) {
+		b2Vec2 v = center + radius * b2Vec2(cosf(theta), sinf(theta));
+		glVertices[i*2]=v.x * mRatio;
+		glVertices[i*2+1]=v.y * mRatio;
+		theta += k_increment;
+	}
+	glColor4f(color.r *0.5f, color.g*0.5f, color.b*0.5f,0.5f);
+	glVertexPointer(2, GL_FLOAT, 0, glVertices);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+	glColor4f(color.r, color.g, color.b,1);
+	glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
+	// Draw the axis line
+	DrawSegment(center,center+radius*axis,color);
+}
+
+void GamGL::DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color)
+{
+	//fprintf(stderr, "drawSegment\n");
+	glColor4f(color.r, color.g, color.b,1);
+	GLfloat glVertices[] = {
+		p1.x * mRatio, p1.y * mRatio,
+		p2.x * mRatio, p2.y * mRatio
+	};
+	glVertexPointer(2, GL_FLOAT, 0, glVertices);
+	glDrawArrays(GL_LINES, 0, 2);
+}
+
+void GamGL::DrawTransform(const b2Transform& xf)
+{
+	//fprintf(stderr, "DrawTransform\n");
+	b2Vec2 p1 = xf.position, p2;
+	const float32 k_axisScale = 0.4f;
+	p2 = p1 + k_axisScale * xf.R.col1;
+	DrawSegment(p1,p2,b2Color(1,0,0));
+	p2 = p1 + k_axisScale * xf.R.col2;
+	DrawSegment(p1,p2,b2Color(0,1,0));
+}
+
+void GamGL::DrawPoint(const b2Vec2& p, float32 size, const b2Color& color)
+{
+	//fprintf(stderr, "drawPoint\n");
+	glColor4f(color.r, color.g, color.b,1);
+	glPointSize(size);
+	GLfloat glVertices[] = {
+		p.x * mRatio / 600, p.y * mRatio / 600
+	};
+	glVertexPointer(2, GL_FLOAT, 0, glVertices);
+	glDrawArrays(GL_POINTS, 0, 1);
+	glPointSize(1.0f);
+}
+
+void GamGL::DrawString(int x, int y, const char *string, ...)
+{
+//	NSLog(@"DrawString: unsupported: %s", string);
+	//printf(string);
+	/* Unsupported as yet. Could replace with bitmap font renderer at a later date */
+}
+
+void GamGL::DrawAABB(b2AABB* aabb, const b2Color& c)
+{
+	fprintf(stderr, "drawAABB\n");
+	glColor4f(c.r, c.g, c.b,1);
+	GLfloat glVertices[] = {
+		aabb->lowerBound.x * mRatio, aabb->lowerBound.y * mRatio,
+		aabb->upperBound.x * mRatio, aabb->lowerBound.y * mRatio,
+		aabb->upperBound.x * mRatio, aabb->upperBound.y * mRatio,
+		aabb->lowerBound.x * mRatio, aabb->upperBound.y * mRatio
+	};
+	glVertexPointer(2, GL_FLOAT, 0, glVertices);
+	glDrawArrays(GL_LINE_LOOP, 0, 8);
+}
+
+void GamGL::timerEvent(QTimerEvent *event)
+{
+	glDraw();
+}
+
+void GamGL::resizeGL(int width, int height)
+{
+	glViewport(0, 0, width, height);
+}
+
+void GamGL::paintGL(void)
+{
+	//fprintf(stderr, "GamGL:paintGL\n");
+	// Default GL states: GL_TEXTURE_2D, GL_VERTEX_ARRAY, GL_COLOR_ARRAY, GL_TEXTURE_COORD_ARRAY
+	// Needed states:  GL_VERTEX_ARRAY,
+	// Unneeded states: GL_TEXTURE_2D, GL_COLOR_ARRAY, GL_TEXTURE_COORD_ARRAY
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_TEXTURE_2D);
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_VERTEX_ARRAY);
+
+	glScalef(1.0f, 1.0f, 1);
+	fprintf(stderr, "==========<print>===========\n");
+	world->DrawDebugData();
+	fprintf(stderr, "==========<end>============\n");
+	// restore default GL states
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glEnable(GL_TEXTURE_2D);
+	glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+}

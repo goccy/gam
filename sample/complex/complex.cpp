@@ -30,5 +30,6 @@ int main(int argc, char **argv)
 	view.setRenderHint(QPainter::Antialiasing);
 	view.show();
 	world.start();
+	//world.debugDraw->show();
 	return app.exec();
 }

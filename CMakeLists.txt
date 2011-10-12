@@ -10,8 +10,11 @@ set(DESIRED_QT_VERSION 4)
 
 #find_package(Qt COMPONENTS QtCore QtGui REQUIRED)
 find_package(Qt4 REQUIRED)
+set(QT_USE_QTOPENGL TRUE)
+
 set(PACKAGE_SOURCE_CODE
 	src/Gam.cpp
+	src/GamGL.cpp
 	include/moc_gam.cxx)
 
 set(PACKAGE_HEADERS include/gam.hpp)
@@ -22,9 +25,9 @@ include(${QT_USE_FILE})
 set(PACKAGE_EXTRA_LIBRARY
 	${QT_QTCORE_LIBRARY}
 	${QT_QTWEBKIT_LIBRARY}
+	${QT_QTOPENGL_LIBRARY}
 	${QT_QTGUI_LIBRARY}
 	)
-
 
 set(PACKAGE_NAME    ${PROJECT_NAME})
 set(PACKAGE_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
@@ -41,6 +44,12 @@ set(INCLUDE_DIRS ${INCLUDE_DIRS} lib/triangle++/include/)
 find_path(HAVE_QTGUI QtGui  PATHS ${include_locations})
 if(HAVE_QTGUI)
 	set(INCLUDE_DIRS ${INCLUDE_DIRS} ${HAVE_QTGUI})
+endif()
+include_directories(${INCLUDE_DIRS})
+
+find_path(HAVE_QTOPENGL QtOpenGL PATHS ${include_locations})
+if(HAVE_QTOPENGL)
+	set(INCLUDE_DIRS ${INCLUDE_DIRS} ${HAVE_QTOPENGL})
 endif()
 include_directories(${INCLUDE_DIRS})
 
@@ -65,14 +74,19 @@ add_library(triangle
 add_library(${PACKAGE_NAME} SHARED ${PACKAGE_SOURCE_CODE} ${PACKAGE_HEADERS_MOC})
 
 set_target_properties(${PACKAGE_NAME} PROPERTIES PREFIX "")
+find_package(OpenGL REQUIRED)
+if (NOT OPENGL_FOUND)
+   message(ERROR "OpenGL not found!!")
+endif(NOT OPENGL_FOUND)
+#MESSAGE(${PACKAGE_EXTRA_LIBRARY})
+#MESSAGE(${OPENGL_LIBRARIES})
 
-target_link_libraries(${PACKAGE_NAME} triangle
+target_link_libraries(${PACKAGE_NAME} ${PACKAGE_EXTRA_LIBRARY} ${OPENGL_LIBRARIES} triangle
 Box2D opencv_calib3d opencv_core opencv_features2d opencv_flann opencv_gpu
 opencv_highgui opencv_imgproc opencv_legacy opencv_ml
-opencv_objdetect opencv_ts opencv_video
-${PACKAGE_EXTRA_LIBRARY})
+opencv_objdetect opencv_ts opencv_video)
 
 set(GAM_PACKAGE_DIR gam)
 install(TARGETS ${PACKAGE_NAME} DESTINATION lib)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/gam.hpp DESTINATION include)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/gamake DESTINATION bin)
+install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/bin/gamake DESTINATION bin)

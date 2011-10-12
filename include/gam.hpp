@@ -4,7 +4,7 @@
 #include <highgui.h>
 
 #include <iostream>
-using namespace std;
+#define PTM_RATIO 32.0f
 
 class Vec2f {
 public:
@@ -27,6 +27,7 @@ typedef enum {
 	GamTextTag,
 	GamLineTag,
 	GamComplexItemTag,
+	GamDistanceJointTag,
 } GamClassDef;
 
 class GamObject {
@@ -65,6 +66,40 @@ signals:
 	void emitEndContactSignal(GamObject *o1, GamObject *o2);
 };
 
+class GamQueryCallback : public b2QueryCallback {
+public:
+	b2Vec2 m_point;
+	b2Fixture* m_fixture;
+	GamQueryCallback(const b2Vec2& point);
+	bool ReportFixture(b2Fixture* fixture);
+};
+
+#include <QtOpenGL>
+
+class GamGL : public QGLWidget, public b2DebugDraw {
+	Q_OBJECT;
+public:
+	float32 mRatio;
+	b2World *world;
+
+	GamGL(void);
+	GamGL(float32 ratio);
+	void show(void);
+	void timerEvent(QTimerEvent *event);
+	void initializeGL(void);
+	void paintGL(void);
+	void resizeGL(int width, int height);
+	void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);
+	void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);
+	void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color);
+	void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color);
+	void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color);
+	void DrawTransform(const b2Transform& xf);
+    void DrawPoint(const b2Vec2& p, float32 size, const b2Color& color);
+    void DrawString(int x, int y, const char* string, ...);
+    void DrawAABB(b2AABB* aabb, const b2Color& color);
+};
+
 class GamWorld : public QObject, public GamObject {
 	Q_OBJECT;
 public:
@@ -74,6 +109,9 @@ public:
 	b2World *world;
 	GamContact *contact;
 	GamScene *scene;
+	b2Body *mouse_joint_body;
+	b2MouseJoint *mouse_joint;
+	GamGL *debugDraw;
 
 	GamWorld(GamScene *scene);
 	void add(GamObject *o);
@@ -87,6 +125,9 @@ signals:
 public slots:
 	void beginContactSlot(GamObject *o1, GamObject *o2);
 	void endContactSlot(GamObject *o1, GamObject *o2);
+	void dragBeginSlot(QGraphicsSceneMouseEvent *event);
+	void dragMoveSlot(QGraphicsSceneMouseEvent *event);
+	void dragEndSlot(QGraphicsSceneMouseEvent *event);
 };
 
 class GamRigidBody {
@@ -122,11 +163,18 @@ public:
 	b2Body *body;
 
 	GamRect(int x, int y, int width, int height);
+	void mousePressEvent(QGraphicsSceneMouseEvent *event);
+	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 	void addToWorld(GamWorld *w);
 	void setTexture(GamTexture *t);
 	GamPoint *getCenter(void);
 	void setSize(float width_, float height_);
 	~GamRect(void);
+signals:
+	void dragBeginSignal(QGraphicsSceneMouseEvent *event);
+	void dragMoveSignal(QGraphicsSceneMouseEvent *event);
+	void dragEndSignal(QGraphicsSceneMouseEvent *event);
 };
 
 class GamEllipse : public QObject, public GamObject, public QGraphicsEllipseItem, public GamRigidBody {
@@ -139,6 +187,7 @@ public:
 	int height;
 	QColor *glow_center_color;
 	b2Body *body;
+	bool glow;
 
 	GamEllipse();
 	void setRectShape(GamRect *r);
@@ -213,6 +262,15 @@ public:
 };
 
 class GamScene : public QGraphicsScene {
+	Q_OBJECT;
+public:
+	void mousePressEvent(QGraphicsSceneMouseEvent *event);
+	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+signals:
+	void dragBeginSignal(QGraphicsSceneMouseEvent *event);
+	void dragMoveSignal(QGraphicsSceneMouseEvent *event);
+	void dragEndSignal(QGraphicsSceneMouseEvent *event);
 };
 
 static inline int match(const char *base, const char *target)
@@ -262,8 +320,15 @@ public:
 	GamComplexItem(const std::vector<Vec2f> &pts, int size);
 	void setPosition(int x, int y);
 	void setColor(QColor *c);
+	void mousePressEvent(QGraphicsSceneMouseEvent *event);
+	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 	~GamComplexItem(void);
 	void addToWorld(GamWorld *w);
+signals:
+	void dragBeginSignal(QGraphicsSceneMouseEvent *event);
+	void dragMoveSignal(QGraphicsSceneMouseEvent *event);
+	void dragEndSignal(QGraphicsSceneMouseEvent *event);
 };
 
 class GamCapture {
@@ -285,4 +350,17 @@ public:
 	GamVideo(const char *filename);
 };
 
+class GamJoint {
+public:
+	GamJoint();
+};
+
+class GamDistanceJoint : public b2DistanceJointDef, public GamObject {
+public:
+	b2DistanceJoint *joint;
+
+	GamDistanceJoint(GamObject *o1, GamObject *o2);
+	b2Body *getBody(GamObject *o);
+	void addToWorld(GamWorld *world);
+};
 extern "C" std::vector<Triangle> triangulate(const std::vector<Vec2f> & points, float resolution);

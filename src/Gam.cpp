@@ -3,6 +3,10 @@
 //============================= GamObject ==============================//
 GamObject::GamObject(void)
 {
+	//x = 0;
+	//y = 0;
+	//width = 0.0f;
+	//height = 0.0f;
 	_tag = 0;
 }
 
@@ -104,18 +108,26 @@ void GamRect::setSize(float width_, float height_)
 
 void GamRect::addToWorld(GamWorld *w)
 {
+	/* reset position for synchronization with box2d [anchor:center] */
+	setRect(-width/2, -height/2, width, height);
 	b2World *world = w->world;
 	b2BodyDef bodyDef;
 	if (!isStatic) {
 		bodyDef.type = b2_dynamicBody;
 	}
-	bodyDef.position.Set(0, 0);
+	/* box2d's anchor point is center position */
+	bodyDef.position.Set((x+width/2)/PTM_RATIO, (y+height/2)/PTM_RATIO);
+	//bodyDef.position.Set(0, 0);
 	bodyDef.angle = -(rotation() * (2 * M_PI)) / 360.0;
 	body = world->CreateBody(&bodyDef);
 
 	b2FixtureDef shapeDef;
 	b2PolygonShape shape;
-	shape.SetAsBox(width/2, height/2, b2Vec2(x + width/2, -y - height/2), 0.0);
+	//shape.SetAsBox(width/2/PTM_RATIO, height/2/PTM_RATIO,
+	//		   b2Vec2((x + width/2)/PTM_RATIO, (y + height/2)/PTM_RATIO), 0.0);
+	//b2Vec2((x + width/2)/PTM_RATIO, (-y - height/2)/PTM_RATIO), 0.0);
+	/* box size is half size of original size */
+	shape.SetAsBox(width/2/PTM_RATIO, height/2/PTM_RATIO);
 	shapeDef.shape = &shape;
 	shapeDef.density = density;
 	shapeDef.friction = friction;
@@ -123,6 +135,21 @@ void GamRect::addToWorld(GamWorld *w)
 	body->CreateFixture(&shapeDef);
 	body->SetBullet(bullet);
 	body->SetUserData(body_userdata);
+}
+
+void GamRect::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragBeginSignal(event);
+}
+
+void GamRect::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragMoveSignal(event);
+}
+
+void GamRect::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragEndSignal(event);
 }
 
 GamRect::~GamRect(void)
@@ -142,6 +169,7 @@ GamEllipse::GamEllipse()
 	setTag(GamEllipseTag);
 	glow_center_color = new QColor("white");
 	isStatic = true;
+	glow = false;
 	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	body_userdata->i = i;
 	GamObject *o = (GamObject *)this;
@@ -157,6 +185,7 @@ void GamEllipse::setPosition(int x_, int y_)
 
 void GamEllipse::setGlow(void)
 {
+	glow = true;
 	setPen(Qt::NoPen);
 	QColor c = brush().color();
 	int orig_center_x = x + width / 2;
@@ -194,19 +223,24 @@ void GamEllipse::setGlowCenterColor(QColor *c)
 
 void GamEllipse::addToWorld(GamWorld *w)
 {
+	/* reset position for synchronization with box2d [anchor:center] */
+	setRect(-width/2, -height/2, width, height);
 	b2World *world = w->world;
 	b2BodyDef bodyDef;
 	if (!isStatic) {
 		bodyDef.type = b2_dynamicBody;
 	}
-	bodyDef.position.Set(0, 0);
+	//bodyDef.position.Set(0, 0);
+	/* box2d's anchor point is center position */
+	bodyDef.position.Set(x/PTM_RATIO, y/PTM_RATIO);
 	bodyDef.angle = -(rotation() * (2 * M_PI)) / 360.0;
 	body = world->CreateBody(&bodyDef);
 
 	b2FixtureDef shapeDef;
 	b2CircleShape shape;
-	shape.m_p = b2Vec2(x + width / 2, -y - height / 2);
-	shape.m_radius = width / 2;
+	//shape.m_p = b2Vec2(x + width / 2, -y - height / 2);
+	//shape.m_p = b2Vec2(x/PTM_RATIO, y/PTM_RATIO);
+	shape.m_radius = width/2/PTM_RATIO;
 	shapeDef.shape = &shape;
 	shapeDef.density = density;
 	shapeDef.friction = friction;
@@ -249,18 +283,24 @@ void GamText::setPosition(int x_, int y_)
 
 void GamText::addToWorld(GamWorld *w)
 {
+	/* reset position for synchronization with box2d [anchor:center] */
+	//setRect(-width/2, -height/2, width, height);
 	b2World *world = w->world;
 	b2BodyDef bodyDef;
 	if (!isStatic) {
 		bodyDef.type = b2_dynamicBody;
 	}
-	bodyDef.position.Set(x, -y);
+	/* box2d's anchor point is center position */
+	//bodyDef.position.Set(x/PTM_RATIO, y/PTM_RATIO);
+	bodyDef.position.Set((x+width/2)/PTM_RATIO, (y+height/2)/PTM_RATIO);
+	//bodyDef.position.Set(x, -y);
 	bodyDef.angle = -(rotation() * (2 * M_PI)) / 360.0;
 	body = world->CreateBody(&bodyDef);
 
 	b2FixtureDef shapeDef;
 	b2PolygonShape shape;
-	shape.SetAsBox(width / 2, height / 2, b2Vec2(3 + width / 2, -height / 2 - 5), 0.0);
+	//shape.SetAsBox(width/2, height/2, b2Vec2(3 + width/2, -height/2 - 5), 0.0);
+	shape.SetAsBox((width/2+3)/PTM_RATIO, (height/2+5)/PTM_RATIO);
 	shapeDef.shape = &shape;
 	shapeDef.density = density;
 	shapeDef.friction = friction;
@@ -295,8 +335,24 @@ GamComplexItem::GamComplexItem(const std::vector<Vec2f> &pts, int size)
 	isStatic = true;
 	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	body_userdata->i = i;
+	body_userdata->setTag(GamComplexItemTag);
 	GamObject *o = (GamObject *)this;
 	setBodyUserData(o);
+}
+
+void GamComplexItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragBeginSignal(event);
+}
+
+void GamComplexItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragMoveSignal(event);
+}
+
+void GamComplexItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragEndSignal(event);
 }
 
 GamComplexItem::~GamComplexItem(void)
@@ -315,7 +371,8 @@ void GamComplexItem::addToWorld(GamWorld *w)
 	if (!isStatic) {
 		bodyDef.type = b2_dynamicBody;
 	}
-	bodyDef.position.Set(x, -y);
+	bodyDef.position.Set(x/PTM_RATIO, y/PTM_RATIO);
+	//bodyDef.position.Set(x, -y);
 	//bodyDef.angle = -(gp_list->at(0)->rotation() * (2 * M_PI)) / 360.0;
 	body = world->CreateBody(&bodyDef);
 	int gp_length = gp_list->size();
@@ -324,16 +381,22 @@ void GamComplexItem::addToWorld(GamWorld *w)
 	shapeDef.density = density;
 	shapeDef.friction = friction;
 	shapeDef.restitution = restitution;
-
 	for (int i = 0; i < gp_length; i++) {
 		QPolygonF poly = gp_list->at(i)->polygon();
 		b2Vec2 vers[3];
 		const QPointF p0 = poly.at(0);
 		const QPointF p1 = poly.at(1);
 		const QPointF p2 = poly.at(2);
-		vers[2].Set(p0.x(), -p0.y());
-		vers[1].Set(p1.x(), -p1.y());
-		vers[0].Set(p2.x(), -p2.y());
+		//fprintf(stderr, "p0 = [%f, %f]\n", p0.x(), p0.y());
+		//fprintf(stderr, "p1 = [%f, %f]\n", p1.x(), p1.y());
+		//fprintf(stderr, "p2 = [%f, %f]\n", p2.x(), p2.y());
+		vers[0].Set(p0.x()/PTM_RATIO, p0.y()/PTM_RATIO);
+		vers[1].Set(p1.x()/PTM_RATIO, p1.y()/PTM_RATIO);
+		vers[2].Set(p2.x()/PTM_RATIO, p2.y()/PTM_RATIO);
+
+		//vers[2].Set((p0.x())/PTM_RATIO, (p0.y())/PTM_RATIO);
+		//vers[1].Set((p1.x())/PTM_RATIO, (p1.y())/PTM_RATIO);
+		//vers[0].Set((p2.x())/PTM_RATIO, (p2.y())/PTM_RATIO);
 		b2PolygonShape shape;
 		shape.Set(vers, 3);
 		shapeDef.shape = &shape;
@@ -358,7 +421,25 @@ void GamComplexItem::setPosition(int x_, int y_)
 	x = x_;
 	y = y_;
 }
+//================================== GamScene ====================================
 
+void GamScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragBeginSignal(event);
+	QGraphicsScene::mousePressEvent(event);
+}
+
+void GamScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragMoveSignal(event);
+	QGraphicsScene::mousePressEvent(event);
+}
+
+void GamScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+	emit dragEndSignal(event);
+	QGraphicsScene::mousePressEvent(event);
+}
 
 //=================================== GamTexture ==============================================//
 GamTexture::GamTexture(const char *filepath_)
@@ -490,18 +571,25 @@ void GamTexture::setColor(QColor *c)
 
 void GamTexture::addToWorld(GamWorld *w)
 {
+	/* reset position for synchronization with box2d [anchor:center] */
+	//setRect(-width/2, -height/2, width, height);
+	setOffset(-width/2, -height/2);
 	b2World *world = w->world;
 	b2BodyDef bodyDef;
 	if (!isStatic) {
 		bodyDef.type = b2_dynamicBody;
 	}
-	bodyDef.position.Set(x, -y);
+	/* box2d's anchor point is center position */
+	bodyDef.position.Set((x)/PTM_RATIO, (y)/PTM_RATIO);
+	//bodyDef.position.Set((x+width/2)/PTM_RATIO, (y+height/2)/PTM_RATIO);
+	//bodyDef.position.Set(x, -y);
 	bodyDef.angle = -(rotation() * (2 * M_PI)) / 360.0;
 	body = world->CreateBody(&bodyDef);
 
 	b2FixtureDef shapeDef;
 	b2PolygonShape shape;
-	shape.SetAsBox(width / 2, height / 2, b2Vec2(width / 2, -height / 2), 0.0);
+	shape.SetAsBox(width/2/PTM_RATIO, height/2/PTM_RATIO);
+	//shape.SetAsBox(width/2, height/2, b2Vec2(width/2, -height/2), 0.0);
 	shapeDef.shape = &shape;
 	shapeDef.density = density;
 	shapeDef.friction = friction;
@@ -660,7 +748,7 @@ void GamLine::addToWorld(GamWorld *w)
 
 	b2FixtureDef shapeDef;
 	b2PolygonShape shape;
-	shape.SetAsBox(width / 2, 1, *(new b2Vec2(x1 + width/2, -y1)), 0.0);
+	shape.SetAsBox(width / 2, 1, b2Vec2(x1 + width/2, -y1), 0.0);
 	shapeDef.shape = &shape;
 	shapeDef.density = density;
 	shapeDef.friction = friction;
@@ -722,20 +810,118 @@ void GamContact::PostSolve(b2Contact *contact, const b2ContactImpulse *impulse)
 	(void)impulse;
 }
 
+GamQueryCallback::GamQueryCallback(const b2Vec2& point)
+{
+	m_point = point;
+	m_fixture = NULL;
+}
+
+bool GamQueryCallback::ReportFixture(b2Fixture* fixture)
+{
+	b2Body* body = fixture->GetBody();
+	b2Vec2 pos = body->GetPosition();
+	//fprintf(stderr, "body = [%p]\n", body);
+	//fprintf(stderr, "pos = (%f, %f)\n", pos.x, pos.y);
+	if (body->GetType() == b2_dynamicBody) {
+		//fprintf(stderr, "m_point = [%f, %f]\n", m_point.x, m_point.y);
+		bool inside = fixture->TestPoint(m_point);
+		fprintf(stderr, "inside = [%d]\n", inside);
+		if (inside) {
+			m_fixture = fixture;
+			// We are done, terminate the query.
+			return false;
+		}
+	}
+	// Continue the query.
+	return true;
+}
+
 //========================================== GamWorld ===========================================//
 GamWorld::GamWorld(GamScene *scene_)
 {
-	world = new b2World(b2Vec2(0.0f, -10.0f), true);
+	world = new b2World(b2Vec2(0.0f, 10.0f), true);
+	world->SetContinuousPhysics(true);
 	iteration = 10;
 	timestep = 1.0f / 30.0f;
 	timer_id = 0;
+
 	contact = new GamContact();
 	world->SetContactListener(contact);
+	b2BodyDef bodyDef;
+	mouse_joint_body = world->CreateBody(&bodyDef);
+	mouse_joint = NULL;
 	scene = scene_;
 	connect(contact, SIGNAL(emitBeginContactSignal(GamObject *, GamObject *)),
 			this, SLOT(beginContactSlot(GamObject *, GamObject *)));
 	connect(contact, SIGNAL(emitEndContactSignal(GamObject *, GamObject *)),
 			this, SLOT(endContactSlot(GamObject *, GamObject *)));
+	//========================== for debug =============================//
+	debugDraw = new GamGL(PTM_RATIO);
+	world->SetDebugDraw(debugDraw);
+	debugDraw->resize(600, 600);
+
+	uint32 flags = 0;
+	flags += b2DebugDraw::e_shapeBit;
+	flags += b2DebugDraw::e_jointBit;
+	flags += b2DebugDraw::e_aabbBit;
+	flags += b2DebugDraw::e_pairBit;
+	flags += b2DebugDraw::e_centerOfMassBit;
+	debugDraw->SetFlags(flags);
+	debugDraw->world = world;
+	//connect(scene, SIGNAL(dragBeginSignal(QGraphicsSceneMouseEvent *)),
+//			this, SLOT(dragBeginSlot(QGraphicsSceneMouseEvent *)));
+	//connect(scene, SIGNAL(dragMoveSignal(QGraphicsSceneMouseEvent *)),
+//			this, SLOT(dragMoveSlot(QGraphicsSceneMouseEvent *)));
+	//connect(scene, SIGNAL(dragEndSignal(QGraphicsSceneMouseEvent *)),
+	//	this, SLOT(dragEndSlot(QGraphicsSceneMouseEvent *)));
+	//=================================================================//
+}
+
+void GamWorld::dragBeginSlot(QGraphicsSceneMouseEvent *event)
+{
+	//fprintf(stderr, "drag begin\n");
+	QPointF pos = event->scenePos();
+	//width/2, height/2, b2Vec2(x + width/2, -y - height/2), 0.0);
+	b2Vec2 p(pos.x()/PTM_RATIO, pos.y()/PTM_RATIO);
+	b2AABB aabb;
+	b2Vec2 d;
+	d.Set(0.001f, 0.001f);
+	aabb.lowerBound = p - d;
+	aabb.upperBound = p + d;
+	//fprintf(stderr, "p -d = (%f, %f)\n", p.x - d.x, p.y - d.y);
+	//fprintf(stderr, "p +d = (%f, %f)\n", p.x + d.x, p.y + d.y);
+	// Query the world for overlapping shapes.
+	GamQueryCallback callback(p);
+	world->QueryAABB(&callback, aabb);
+	//fprintf(stderr, "callback.m_fixture = [%p]\n", callback.m_fixture);
+	if (callback.m_fixture) {
+		//fprintf(stderr, "create joint\n");
+		b2Body* body = callback.m_fixture->GetBody();
+		b2MouseJointDef md;
+		md.bodyA = mouse_joint_body;
+		md.bodyB = body;
+		md.target = p;
+		md.maxForce = 1000.0f * body->GetMass();
+		mouse_joint = (b2MouseJoint*)world->CreateJoint(&md);
+		body->SetAwake(true);
+	}
+}
+
+void GamWorld::dragMoveSlot(QGraphicsSceneMouseEvent *event)
+{
+	if (mouse_joint) {
+		QPointF pos = event->scenePos();
+		b2Vec2 p(pos.x()/PTM_RATIO, pos.y()/PTM_RATIO);
+		mouse_joint->SetTarget(p);
+	}
+}
+
+void GamWorld::dragEndSlot(QGraphicsSceneMouseEvent *event)
+{
+	if (mouse_joint) {
+		world->DestroyJoint(mouse_joint);
+		mouse_joint = NULL;
+	}
 }
 
 void GamWorld::beginContactSlot(GamObject *o1, GamObject *o2)
@@ -764,11 +950,24 @@ inline void removeWorld(GamWorld *world, T o)
 
 #define addWorld(T, o) ((T)o)->addToWorld(this)
 
+template<class T>
+inline void dragConnect(GamWorld *world, T o)
+{
+	QObject::connect(o, SIGNAL(dragBeginSignal(QGraphicsSceneMouseEvent *)),
+					 world, SLOT(dragBeginSlot(QGraphicsSceneMouseEvent *)));
+	QObject::connect(o, SIGNAL(dragMoveSignal(QGraphicsSceneMouseEvent *)),
+					 world, SLOT(dragMoveSlot(QGraphicsSceneMouseEvent *)));
+	QObject::connect(o, SIGNAL(dragEndSignal(QGraphicsSceneMouseEvent *)),
+					 world, SLOT(dragEndSlot(QGraphicsSceneMouseEvent *)));
+}
+
 void GamWorld::add(GamObject *o)
 {
+	//fprintf(stderr, "tag = [%d]\n", o->tag());
 	switch (o->tag()) {
 	case GamRectTag:
 		addWorld(GamRect *, o);
+		dragConnect(this, (GamRect *)o);
 		break;
 	case GamEllipseTag:
 		addWorld(GamEllipse *, o);
@@ -784,6 +983,10 @@ void GamWorld::add(GamObject *o)
 		break;
 	case GamComplexItemTag:
 		addWorld(GamComplexItem *, o);
+		dragConnect(this, (GamComplexItem *)o);
+		break;
+	case GamDistanceJointTag:
+		addWorld(GamDistanceJoint *, o);
 		break;
 	default:
 		fprintf(stderr, "World: [WARNING] UNNOWN OBJECT\n");
@@ -821,12 +1024,19 @@ void GamWorld::timerEvent(QTimerEvent *event)
 {
 	if (event->timerId() == timer_id) {
 		world->Step(timestep, 8, 1);
-		for (b2Body* b = world->GetBodyList(); b; b = b->GetNext())	{
+		for (b2Body* b = world->GetBodyList(); b; b = b->GetNext()) {
 			if (b->GetUserData() != NULL) {
 				GamObject *data = (GamObject *)b->GetUserData();
 				QGraphicsItem *i = (QGraphicsItem *)data->i;
-				i->setPos(b->GetPosition().x, -b->GetPosition().y);
-				i->setRotation(-1 * b->GetAngle() * 360.0 / (2 * M_PI));
+				QPointF p = i->pos();
+				//fprintf(stderr, "[%f, %f]\n", p.x(), p.y());
+				//fprintf(stderr, "pos = [%f, %f]\n", b->GetPosition().x * PTM_RATIO, b->GetPosition().y * PTM_RATIO);
+				i->setPos(b->GetPosition().x * PTM_RATIO, b->GetPosition().y * PTM_RATIO);
+				if (data->tag() == GamComplexItemTag) {
+					i->setRotation(b->GetAngle() * 360.0 / (2 * M_PI));
+				} else {
+					i->setRotation(-1 * b->GetAngle() * 360.0 / (2 * M_PI));
+				}
 			}
 		}
 	}
@@ -978,6 +1188,63 @@ GamVideo::GamVideo(const char *filename)
 	capture = cvCaptureFromAVI(filename);
 }
 
+GamJoint::GamJoint(void)
+{
+
+}
+
+GamDistanceJoint::GamDistanceJoint(GamObject *o1, GamObject *o2)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	fprintf(stderr, "bodyA = (%f, %f) : bodyB = (%f, %f)\n",
+			bodyA->GetLocalCenter().x, bodyA->GetLocalCenter().y,
+			bodyB->GetLocalCenter().x, bodyB->GetLocalCenter().y);
+	Initialize(bodyA, bodyB,
+			   bodyA->GetWorldCenter(), bodyB->GetWorldCenter());
+	collideConnected = true;
+	frequencyHz = 4.0f;
+	dampingRatio = 0.5f;
+	length = 100.0f/PTM_RATIO;
+	setTag(GamDistanceJointTag);
+}
+
+void GamDistanceJoint::addToWorld(GamWorld *w)
+{
+	b2World *world = w->world;
+	b2DistanceJoint *j = (b2DistanceJoint *)world->CreateJoint(this);
+	joint = j;
+}
+
+#define GET_BODY(T, o) ((T)o)->body
+b2Body *GamDistanceJoint::getBody(GamObject *o)
+{
+	b2Body *body = NULL;
+	switch (o->tag()) {
+	case GamRectTag:
+		body = GET_BODY(GamRect *, o);
+		break;
+	case GamEllipseTag:
+		body = GET_BODY(GamEllipse *, o);
+		break;
+	case GamTextureTag:
+		body = GET_BODY(GamTexture *, o);
+		break;
+	case GamTextTag:
+		body = GET_BODY(GamText *, o);
+		break;
+	case GamLineTag:
+		body = GET_BODY(GamLine *, o);
+		break;
+	case GamComplexItemTag:
+		body = GET_BODY(GamComplexItem *, o);
+		break;
+	default:
+		fprintf(stderr, "World: [WARNING] UNNOWN OBJECT\n");
+		break;
+	}
+	return body;
+}
 
 #include <del_interface.hpp>
 //====================== Written by Takuma Wakamori =========================//

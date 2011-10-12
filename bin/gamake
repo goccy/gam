@@ -1,6 +1,28 @@
 #!/usr/bin/perl
 
 `qmake -project`;
+use Cwd;
+my $cur_dir = getcwd();
+my @dirs = split(/\//, $cur_dir);
+my $dir_name = $dirs[$#dirs], "\n";
+my $project_file = $dir_name . ".pro";
+#print $project_file, "\n";
+open(IN, $project_file);
+open (OUT, "> tmp.pro");
+my $qtFlag = 0;
+while ($line = <IN>) {
+	if ($line =~ /QT/) {
+		$line =~ s/\n//g;
+		$line .= " opengl\n";
+		$qtFlag = 1;
+	}
+	print (OUT $line);
+}
+if ($qtFlag == 0) {
+	print (OUT "QT += opengl");
+}
+`mv tmp.pro $project_file`;
+
 `qmake`;
 open(IN, "Makefile");
 open(OUT, "> tmp.mk");
