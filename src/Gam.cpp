@@ -1052,10 +1052,25 @@ void GamWorld::timerEvent(QTimerEvent *event)
 					GamObject *d = (GamObject *)jointList->joint->GetUserData();
 					b2Body *b2 = jointList->other;
 					if (d) {
-						QGraphicsLineItem *line = dynamic_cast<QGraphicsLineItem *>(d->i);
-						b2Vec2 posB = b2->GetPosition();
-						line->setLine(posA.x * PTM_RATIO, posA.y * PTM_RATIO,
-									  posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+						if (jointList->joint->GetType() == e_pulleyJoint) {
+							b2PulleyJoint *pulley = (b2PulleyJoint *)jointList->joint;
+							b2Vec2 anchorA = pulley->GetAnchorA();
+							b2Vec2 anchorB = pulley->GetAnchorB();
+							b2Vec2 groundAnchorA = pulley->GetGroundAnchorA();
+							b2Vec2 groundAnchorB = pulley->GetGroundAnchorB();
+							QGraphicsPathItem *p = dynamic_cast<QGraphicsPathItem *>(d->i);
+							QPainterPath path;
+							path.moveTo(anchorA.x * PTM_RATIO, anchorA.y * PTM_RATIO);
+							path.lineTo(groundAnchorA.x * PTM_RATIO, groundAnchorA.y * PTM_RATIO);
+							path.lineTo(groundAnchorB.x * PTM_RATIO, groundAnchorB.y * PTM_RATIO);
+							path.lineTo(anchorB.x * PTM_RATIO, anchorB.y * PTM_RATIO);
+							p->setPath(path);
+						} else {
+							QGraphicsLineItem *line = dynamic_cast<QGraphicsLineItem *>(d->i);
+							b2Vec2 posB = b2->GetPosition();
+							line->setLine(posA.x * PTM_RATIO, posA.y * PTM_RATIO,
+										  posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+						}
 					}
 				}
 			}
@@ -1378,18 +1393,57 @@ GamPrismaticJoint::GamPrismaticJoint(GamObject *o1, GamObject *o2)
 {
 	b2Body *bodyA = getBody(o1);
 	b2Body *bodyB = getBody(o2);
-	fprintf(stderr, "GamPrismaticJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n",
-			bodyA->GetPosition().x, bodyA->GetPosition().y,
-			bodyB->GetPosition().x, bodyB->GetPosition().y);
+	if (bodyA == NULL || bodyB == NULL) {
+		fprintf(stderr, "GamPrismaticJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
+		return;
+	}
+	b2Vec2 posA = bodyA->GetPosition();
+	b2Vec2 posB = bodyB->GetPosition();
+	fprintf(stderr, "GamPrismaticJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n", posA.x, posA.y, posB.x, posB.y);
 	b2Vec2 worldAxis(1.0f, 0.0f);
-	Initialize(bodyA, bodyB, bodyA->GetPosition(), worldAxis);
+	Initialize(bodyA, bodyB, posA, worldAxis);
 	lowerTranslation = -5.0f;
 	upperTranslation = 2.5f;
 	enableLimit = true;
 	maxMotorForce = 1.0f;
 	motorSpeed = 0.0f;
 	enableMotor = true;
+	setLine(posA.x * PTM_RATIO, posA.y * PTM_RATIO, posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+	QGraphicsLineItem *i = dynamic_cast<QGraphicsLineItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
 	setTag(GamPrismaticJointTag);
+}
+
+void GamPrismaticJoint::setLowerTranslation(float translation)
+{
+	lowerTranslation = translation;
+}
+
+void GamPrismaticJoint::setUpperTranslation(float translation)
+{
+	upperTranslation = translation;
+}
+
+void GamPrismaticJoint::setEnableLimit(bool b)
+{
+	enableLimit = b;
+}
+
+void GamPrismaticJoint::setMaxMotorForce(float force)
+{
+	maxMotorForce = force;
+}
+
+void GamPrismaticJoint::setMotorSpeed(float speed)
+{
+	motorSpeed = speed;
+}
+
+void GamPrismaticJoint::setEnableMotor(bool b)
+{
+	enableMotor = b;
 }
 
 void GamPrismaticJoint::addToWorld(GamWorld *w)
@@ -1397,15 +1451,16 @@ void GamPrismaticJoint::addToWorld(GamWorld *w)
 	b2World *world = w->world;
 	b2PrismaticJoint *j = (b2PrismaticJoint *)world->CreateJoint(this);
 	joint = j;
+	joint->SetUserData(body_userdata);
 }
 
 //========================================== GamPulleyJoint ===============================================//
-GamPulleyJoint::GamPulleyJoint(GamObject *o1, GamObject *o2)
+GamPulleyJoint::GamPulleyJoint(GamObject *o1, const GamPoint &p1, GamObject *o2, const GamPoint &p2)
 {
 	b2Body *bodyA = getBody(o1);
 	b2Body *bodyB = getBody(o2);
 	if (bodyA == NULL || bodyB == NULL) {
-		fprintf(stderr, "GamRulleyJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
+		fprintf(stderr, "GamPulleyJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
 		return;
 	}
 	b2Vec2 posA = bodyA->GetPosition();
@@ -1413,15 +1468,21 @@ GamPulleyJoint::GamPulleyJoint(GamObject *o1, GamObject *o2)
 	fprintf(stderr, "GamPulleyJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n", posA.x, posA.y, posB.x, posB.y);
 	b2Vec2 anchorA = posA;
 	b2Vec2 anchorB = posB;
-	b2Vec2 groundAnchorA(posA.x, posA.y - 100/PTM_RATIO);
-	b2Vec2 groundAnchorB(posB.x, posB.y - 100/PTM_RATIO);
+	b2Vec2 groundAnchorA(p1.x/PTM_RATIO, p1.y/PTM_RATIO);
+	b2Vec2 groundAnchorB(p2.x/PTM_RATIO, p2.y/PTM_RATIO);
 	float32 ratio = 1.0f;
 	Initialize(bodyA, bodyB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio);
-	QGraphicsLineItem *i = dynamic_cast<QGraphicsLineItem *>(this);
+	QGraphicsPathItem *i = dynamic_cast<QGraphicsPathItem *>(this);
 	body_userdata->i = i;
 	GamObject *o = (GamObject *)this;
 	setBodyUserData(o);
 	setTag(GamPulleyJointTag);
+	QPainterPath path;
+	path.moveTo(posA.x * PTM_RATIO, posA.y * PTM_RATIO);
+	path.lineTo(p1.x, p1.y);
+	path.lineTo(p2.x, p2.y);
+	path.lineTo(posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+	setPath(path);
 }
 
 void GamPulleyJoint::addToWorld(GamWorld *w)
@@ -1429,6 +1490,7 @@ void GamPulleyJoint::addToWorld(GamWorld *w)
 	b2World *world = w->world;
 	b2PulleyJoint *j = (b2PulleyJoint *)world->CreateJoint(this);
 	joint = j;
+	joint->SetUserData(body_userdata);
 }
 
 //========================================== GamGearJoint ===============================================//

@@ -396,18 +396,25 @@ public:
 	void addToWorld(GamWorld *world);
 };
 
-class GamPrismaticJoint : public b2PrismaticJointDef, public GamObject, public GamJoint {
+class GamPrismaticJoint : public b2PrismaticJointDef, public QGraphicsLineItem,
+						  public GamObject, public GamJoint {
 public:
 
 	GamPrismaticJoint(GamObject *o1, GamObject *o2);
+	void setLowerTranslation(float translation);
+	void setUpperTranslation(float translation);
+	void setEnableLimit(bool b);
+	void setMaxMotorForce(float force);
+	void setMotorSpeed(float speed);
+	void setEnableMotor(bool b);
 	void addToWorld(GamWorld *world);
 };
 
-class GamPulleyJoint : public b2PulleyJointDef, public QGraphicsLineItem,
+class GamPulleyJoint : public b2PulleyJointDef, public QGraphicsPathItem,
 					   public GamObject, public GamJoint {
 public:
 
-	GamPulleyJoint(GamObject *o1, GamObject *o2);
+	GamPulleyJoint(GamObject *o1, const GamPoint &p1, GamObject *o2, const GamPoint &p2);
 	void addToWorld(GamWorld *world);
 };
 

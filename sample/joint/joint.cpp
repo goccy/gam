@@ -63,6 +63,7 @@ void PhysicsWorld::addPrismaticJointObject(void)
 	scene->addItem(e);
 	GamPrismaticJoint *j = new GamPrismaticJoint(r, e);
 	world->add(j);
+	scene->addItem(j);
 }
 
 void PhysicsWorld::addPulleyJointObject(void)
@@ -77,8 +78,12 @@ void PhysicsWorld::addPulleyJointObject(void)
 	world->add(r2);
 	scene->addItem(r);
 	scene->addItem(r2);
-	GamPulleyJoint *j = new GamPulleyJoint(r, r2);
+	GamPulleyJoint *j = new GamPulleyJoint(r, GamPoint(300, 300), r2, GamPoint(400, 300));
 	world->add(j);
+	QPen pen;
+	pen.setColor(QColor("#ee82ee"));
+	j->setPen(pen);
+	scene->addItem(j);
 }
 
 void PhysicsWorld::show(void)
@@ -87,7 +92,7 @@ void PhysicsWorld::show(void)
 	view->setRenderHint(QPainter::Antialiasing);
 	view->show();
 	world->start();
-	world->debugDraw->show();
+	//world->debugDraw->show();
 }
 
 int main(int argc, char **argv)
