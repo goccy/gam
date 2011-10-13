@@ -8,7 +8,10 @@ public:
 	QGraphicsView *view;
 
 	PhysicsWorld(void);
-	void addJointObject(void);
+	void addDistanceJointObject(void);
+	void addRevoluteJointObject(void);
+	void addPrismaticJointObject(void);
+	void addPulleyJointObject(void);
 	void show(void);
 };
 

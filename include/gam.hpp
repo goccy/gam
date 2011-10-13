@@ -28,6 +28,15 @@ typedef enum {
 	GamLineTag,
 	GamComplexItemTag,
 	GamDistanceJointTag,
+	GamRevoluteJointTag,
+	GamPrismaticJointTag,
+	GamPulleyJointTag,
+	GamGearJointTag,
+	//GamMouseJointTag,
+	//GamWheelJointTag,
+	//GamWeldJointTag,
+	//GamRopeJointTag,
+	//GamFrictionJointTag,
 } GamClassDef;
 
 class GamObject {
@@ -186,6 +195,7 @@ public:
 	int width;
 	int height;
 	QColor *glow_center_color;
+	QColor *color;
 	b2Body *body;
 	bool glow;
 
@@ -352,15 +362,60 @@ public:
 
 class GamJoint {
 public:
+	b2Joint *joint;
+	GamObject *body_userdata;
+
 	GamJoint();
+	void setBodyUserData(void *userdata);
+	b2Body *getBody(GamObject *o);
 };
 
-class GamDistanceJoint : public b2DistanceJointDef, public GamObject {
+class GamDistanceJoint : public b2DistanceJointDef, public QGraphicsLineItem,
+						 public GamObject, public GamJoint {
 public:
-	b2DistanceJoint *joint;
 
 	GamDistanceJoint(GamObject *o1, GamObject *o2);
-	b2Body *getBody(GamObject *o);
+	void setFrequencyHz(float frequency);
+	void setDampingRatio(float ratio);
+	void setLength(float length);
+	void setCollideConnected(bool b);
 	void addToWorld(GamWorld *world);
 };
+
+class GamRevoluteJoint : public b2RevoluteJointDef, public QGraphicsLineItem,
+						 public GamObject, public GamJoint {
+public:
+
+	GamRevoluteJoint(GamObject *o1, GamObject *o2);
+	void setLowerAngle(float angle);
+	void setUpperAngle(float angle);
+	void setEnableLimit(bool b);
+	void setMaxMotorTorque(float torque);
+	void setMotorSpeed(float speed);
+	void setEnableMotor(bool b);
+	void addToWorld(GamWorld *world);
+};
+
+class GamPrismaticJoint : public b2PrismaticJointDef, public GamObject, public GamJoint {
+public:
+
+	GamPrismaticJoint(GamObject *o1, GamObject *o2);
+	void addToWorld(GamWorld *world);
+};
+
+class GamPulleyJoint : public b2PulleyJointDef, public QGraphicsLineItem,
+					   public GamObject, public GamJoint {
+public:
+
+	GamPulleyJoint(GamObject *o1, GamObject *o2);
+	void addToWorld(GamWorld *world);
+};
+
+class GamGearJoint : public b2GearJointDef, public GamObject, public GamJoint {
+public:
+
+	GamGearJoint(GamObject *o1, GamJoint *j1, GamObject *o2, GamJoint *j2);
+	void addToWorld(GamWorld *world);
+};
+
 extern "C" std::vector<Triangle> triangulate(const std::vector<Vec2f> & points, float resolution);

@@ -25,17 +25,12 @@ void GamGL::initializeGL(void)
 
 void GamGL::DrawPolygon(const b2Vec2* old_vertices, int32 vertexCount, const b2Color& color)
 {
-	//glBegin(GL_QUADS);
-	//fprintf(stderr, "====== drawPolygon ====\n");
-	//fprintf(stderr, "vertexCount = [%d]\n", vertexCount);
-	//fprintf(stderr, "color[r,g,b] = [%f, %f, %f]\n", color.r, color.g, color.b);
 	b2Vec2 vertices[vertexCount];
 	for (int i = 0; i < vertexCount; i++) {
 		vertices[i] = old_vertices[i];
 		vertices[i] *= mRatio;
 		vertices[i].x /= 600;
 		vertices[i].y /= 600;
-		fprintf(stderr, "(x, y) = [%f, %f]\n", vertices[i].x, vertices[i].y);
 	}
 	glColor4f(color.r, color.g, color.b,1);
 	glVertexPointer(2, GL_FLOAT, 0, vertices);
@@ -44,9 +39,6 @@ void GamGL::DrawPolygon(const b2Vec2* old_vertices, int32 vertexCount, const b2C
 
 void GamGL::DrawSolidPolygon(const b2Vec2* old_vertices, int32 vertexCount, const b2Color& color)
 {
-	//fprintf(stderr, "====== drawSolidPolygon =====\n");
-	//fprintf(stderr, "vertexCount = [%d]\n", vertexCount);
-	//fprintf(stderr, "color[r,g,b] = [%f, %f, %f]\n", color.r, color.g, color.b);
 	b2Vec2 vertices[vertexCount];
 	for (int i = 0; i < vertexCount; i++) {
 		vertices[i] = old_vertices[i];
@@ -63,7 +55,6 @@ void GamGL::DrawSolidPolygon(const b2Vec2* old_vertices, int32 vertexCount, cons
 
 void GamGL::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color)
 {
-	fprintf(stderr, "drawCircle\n");
 	const float32 k_segments = 16.0f;
 	int vertexCount=16;
 	const float32 k_increment = 2.0f * b2_pi / k_segments;
@@ -71,8 +62,8 @@ void GamGL::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& colo
 	GLfloat glVertices[vertexCount*2];
 	for (int32 i = 0; i < k_segments; ++i) {
 		b2Vec2 v = center + radius * b2Vec2(cosf(theta), sinf(theta));
-		glVertices[i*2]=v.x * mRatio;
-		glVertices[i*2+1]=v.y * mRatio;
+		glVertices[i*2]=v.x * mRatio / 600;
+		glVertices[i*2+1]=v.y * mRatio / 600;
 		theta += k_increment;
 	}
 	glColor4f(color.r, color.g, color.b,1);
@@ -82,7 +73,6 @@ void GamGL::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& colo
 
 void GamGL::DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color)
 {
-	fprintf(stderr, "DrawSolidCircle\n");
 	const float32 k_segments = 16.0f;
 	int vertexCount=16;
 	const float32 k_increment = 2.0f * b2_pi / k_segments;
@@ -90,8 +80,8 @@ void GamGL::DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& 
 	GLfloat glVertices[vertexCount*2];
 	for (int32 i = 0; i < k_segments; ++i) {
 		b2Vec2 v = center + radius * b2Vec2(cosf(theta), sinf(theta));
-		glVertices[i*2]=v.x * mRatio;
-		glVertices[i*2+1]=v.y * mRatio;
+		glVertices[i*2]=v.x * mRatio / 600;
+		glVertices[i*2+1]=v.y * mRatio / 600;
 		theta += k_increment;
 	}
 	glColor4f(color.r *0.5f, color.g*0.5f, color.b*0.5f,0.5f);
@@ -108,8 +98,8 @@ void GamGL::DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color
 	//fprintf(stderr, "drawSegment\n");
 	glColor4f(color.r, color.g, color.b,1);
 	GLfloat glVertices[] = {
-		p1.x * mRatio, p1.y * mRatio,
-		p2.x * mRatio, p2.y * mRatio
+		p1.x * mRatio/600, p1.y * mRatio/600,
+		p2.x * mRatio/600, p2.y * mRatio/600
 	};
 	glVertexPointer(2, GL_FLOAT, 0, glVertices);
 	glDrawArrays(GL_LINES, 0, 2);
@@ -148,7 +138,7 @@ void GamGL::DrawString(int x, int y, const char *string, ...)
 
 void GamGL::DrawAABB(b2AABB* aabb, const b2Color& c)
 {
-	fprintf(stderr, "drawAABB\n");
+	//fprintf(stderr, "drawAABB\n");
 	glColor4f(c.r, c.g, c.b,1);
 	GLfloat glVertices[] = {
 		aabb->lowerBound.x * mRatio, aabb->lowerBound.y * mRatio,
@@ -183,9 +173,7 @@ void GamGL::paintGL(void)
 	glEnableClientState(GL_VERTEX_ARRAY);
 
 	glScalef(1.0f, 1.0f, 1);
-	fprintf(stderr, "==========<print>===========\n");
 	world->DrawDebugData();
-	fprintf(stderr, "==========<end>============\n");
 	// restore default GL states
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glEnable(GL_TEXTURE_2D);

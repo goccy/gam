@@ -188,31 +188,17 @@ void GamEllipse::setGlow(void)
 	glow = true;
 	setPen(Qt::NoPen);
 	QColor c = brush().color();
-	int orig_center_x = x + width / 2;
-	int orig_center_y = y + height / 2;
-	int spread = width * 4;
-	double default_size = 1 / 4.0f;
-	int center_x = x + spread / 2;
-	int center_y = y + spread / 2;
-	int div_x = orig_center_x - center_x;
-	int div_y = orig_center_y - center_y;
-	setRect(QRect(x + div_x, y + div_y, spread, spread));
-	QRadialGradient radial(orig_center_x, orig_center_y, spread/2);
+	color = new QColor(c);
+	QRadialGradient radial(x+width/2, y+height/2, width/2);
 	QColor c1(c);
-	c1.setAlpha(0x99);
+	c1.setAlpha(0xcc);
 	QColor c2(c);
 	c2.setAlpha(0x44);
 	QColor c3(c);
-	c3.setAlpha(0x33);
-	QColor c4(c);
-	c4.setAlpha(0x00);
-	//c4.setAlpha(0x11);
-	radial.setColorAt(default_size * 0.4, *glow_center_color);
-	radial.setColorAt(default_size * 0.8, c1);
-	radial.setColorAt(default_size, c2);
-	radial.setColorAt(default_size * 1.0, c3);
-	//radial.setColorAt(default_size * 1.5, c3);
-	radial.setColorAt(1.0, c4);
+	c3.setAlpha(0x11);
+	radial.setColorAt(0.4, *glow_center_color);
+	radial.setColorAt(0.8, c1);
+	radial.setColorAt(1.0, c2);
 	setBrush(QBrush(radial));
 }
 
@@ -225,6 +211,20 @@ void GamEllipse::addToWorld(GamWorld *w)
 {
 	/* reset position for synchronization with box2d [anchor:center] */
 	setRect(-width/2, -height/2, width, height);
+	if (glow) {
+		QColor c = *color;
+		QRadialGradient radial(0, 0, width/2);
+		QColor c1(c);
+		c1.setAlpha(0xcc);
+		QColor c2(c);
+		c2.setAlpha(0x44);
+		QColor c3(c);
+		c3.setAlpha(0x11);
+		radial.setColorAt(0.4, *glow_center_color);
+		radial.setColorAt(0.8, c1);
+		radial.setColorAt(1.0, c2);
+		setBrush(radial);
+	}
 	b2World *world = w->world;
 	b2BodyDef bodyDef;
 	if (!isStatic) {
@@ -988,6 +988,18 @@ void GamWorld::add(GamObject *o)
 	case GamDistanceJointTag:
 		addWorld(GamDistanceJoint *, o);
 		break;
+	case GamRevoluteJointTag:
+		addWorld(GamRevoluteJoint *, o);
+		break;
+	case GamPrismaticJointTag:
+		addWorld(GamPrismaticJoint *, o);
+		break;
+	case GamPulleyJointTag:
+		addWorld(GamPulleyJoint *, o);
+		break;
+	case GamGearJointTag:
+		addWorld(GamGearJoint *, o);
+		break;
 	default:
 		fprintf(stderr, "World: [WARNING] UNNOWN OBJECT\n");
 		break;
@@ -1025,17 +1037,26 @@ void GamWorld::timerEvent(QTimerEvent *event)
 	if (event->timerId() == timer_id) {
 		world->Step(timestep, 8, 1);
 		for (b2Body* b = world->GetBodyList(); b; b = b->GetNext()) {
-			if (b->GetUserData() != NULL) {
-				GamObject *data = (GamObject *)b->GetUserData();
+			GamObject *data = (GamObject *)b->GetUserData();
+			if (data) {
+				b2Vec2 posA = b->GetPosition();
 				QGraphicsItem *i = (QGraphicsItem *)data->i;
-				QPointF p = i->pos();
-				//fprintf(stderr, "[%f, %f]\n", p.x(), p.y());
-				//fprintf(stderr, "pos = [%f, %f]\n", b->GetPosition().x * PTM_RATIO, b->GetPosition().y * PTM_RATIO);
-				i->setPos(b->GetPosition().x * PTM_RATIO, b->GetPosition().y * PTM_RATIO);
+				i->setPos(posA.x * PTM_RATIO, posA.y * PTM_RATIO);
 				if (data->tag() == GamComplexItemTag) {
 					i->setRotation(b->GetAngle() * 360.0 / (2 * M_PI));
 				} else {
 					i->setRotation(-1 * b->GetAngle() * 360.0 / (2 * M_PI));
+				}
+				b2JointEdge *jointList = b->GetJointList();
+				if (jointList) {
+					GamObject *d = (GamObject *)jointList->joint->GetUserData();
+					b2Body *b2 = jointList->other;
+					if (d) {
+						QGraphicsLineItem *line = dynamic_cast<QGraphicsLineItem *>(d->i);
+						b2Vec2 posB = b2->GetPosition();
+						line->setLine(posA.x * PTM_RATIO, posA.y * PTM_RATIO,
+									  posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+					}
 				}
 			}
 		}
@@ -1190,34 +1211,16 @@ GamVideo::GamVideo(const char *filename)
 
 GamJoint::GamJoint(void)
 {
-
+	body_userdata = new GamObject();
 }
 
-GamDistanceJoint::GamDistanceJoint(GamObject *o1, GamObject *o2)
+void GamJoint::setBodyUserData(void *userdata)
 {
-	b2Body *bodyA = getBody(o1);
-	b2Body *bodyB = getBody(o2);
-	fprintf(stderr, "bodyA = (%f, %f) : bodyB = (%f, %f)\n",
-			bodyA->GetLocalCenter().x, bodyA->GetLocalCenter().y,
-			bodyB->GetLocalCenter().x, bodyB->GetLocalCenter().y);
-	Initialize(bodyA, bodyB,
-			   bodyA->GetWorldCenter(), bodyB->GetWorldCenter());
-	collideConnected = true;
-	frequencyHz = 4.0f;
-	dampingRatio = 0.5f;
-	length = 100.0f/PTM_RATIO;
-	setTag(GamDistanceJointTag);
-}
-
-void GamDistanceJoint::addToWorld(GamWorld *w)
-{
-	b2World *world = w->world;
-	b2DistanceJoint *j = (b2DistanceJoint *)world->CreateJoint(this);
-	joint = j;
+	body_userdata->userdata = userdata;
 }
 
 #define GET_BODY(T, o) ((T)o)->body
-b2Body *GamDistanceJoint::getBody(GamObject *o)
+b2Body *GamJoint::getBody(GamObject *o)
 {
 	b2Body *body = NULL;
 	switch (o->tag()) {
@@ -1246,8 +1249,214 @@ b2Body *GamDistanceJoint::getBody(GamObject *o)
 	return body;
 }
 
+#define GET_DISTANCE_(x, y) sqrt((x) * (x) + (y) * (y))
+#define GET_DISTANCE(posA, posB) GET_DISTANCE_(posA.x - posA.y, posB.x - posB.y)
+
+//============================================ GamDistanceJoint ==============================================//
+GamDistanceJoint::GamDistanceJoint(GamObject *o1, GamObject *o2)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	if (bodyA == NULL || bodyB == NULL) {
+		fprintf(stderr, "GamDistanceJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
+		return;
+	}
+	b2Vec2 posA = bodyA->GetPosition();
+	b2Vec2 posB = bodyB->GetPosition();
+	fprintf(stderr, "GamDistanceJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n", posA.x, posA.y, posB.x, posB.y);
+	Initialize(bodyA, bodyB, posA, posB);
+	setLine(posA.x * PTM_RATIO, posA.y * PTM_RATIO, posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+	collideConnected = true;
+	frequencyHz = 4.0f;
+	dampingRatio = 0.5f;
+	float distance = GET_DISTANCE(posA, posB);
+	length = distance;
+	QGraphicsLineItem *i = dynamic_cast<QGraphicsLineItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
+	setTag(GamDistanceJointTag);
+}
+
+void GamDistanceJoint::setFrequencyHz(float frequency)
+{
+	frequencyHz = frequency;
+}
+
+void GamDistanceJoint::setDampingRatio(float ratio)
+{
+	dampingRatio = ratio;
+}
+
+void GamDistanceJoint::setLength(float length_)
+{
+	length = length_ / PTM_RATIO;
+}
+
+void GamDistanceJoint::setCollideConnected(bool b)
+{
+	collideConnected = b;
+}
+
+void GamDistanceJoint::addToWorld(GamWorld *w)
+{
+	b2World *world = w->world;
+	b2DistanceJoint *j = (b2DistanceJoint *)world->CreateJoint(this);
+	joint = j;
+	joint->SetUserData(body_userdata);
+}
+
+#define DEGREE_TO_RADIAN(deg) deg * 2 * M_PI / 360.0f
+
+//=========================================== GamRevoluteJoint ===============================================//
+GamRevoluteJoint::GamRevoluteJoint(GamObject *o1, GamObject *o2)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	if (bodyA == NULL || bodyB == NULL) {
+		fprintf(stderr, "GamRevoluteJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
+		return;
+	}
+	b2Vec2 posA = bodyA->GetPosition();
+	b2Vec2 posB = bodyB->GetPosition();
+	fprintf(stderr, "GamRevoluteJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n", posA.x, posA.y, posB.x, posB.y);
+	Initialize(bodyA, bodyB, posA);
+	setLine(posA.x * PTM_RATIO, posA.y * PTM_RATIO, posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+	lowerAngle = DEGREE_TO_RADIAN(-90);
+	upperAngle = DEGREE_TO_RADIAN(45);
+	enableLimit = true;
+	maxMotorTorque = 10.0f;
+	motorSpeed = 0.0f;
+	enableMotor = true;
+	QGraphicsLineItem *i = dynamic_cast<QGraphicsLineItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
+	setTag(GamRevoluteJointTag);
+}
+
+void GamRevoluteJoint::setLowerAngle(float degree_angle)
+{
+	lowerAngle = DEGREE_TO_RADIAN(degree_angle);
+}
+
+void GamRevoluteJoint::setUpperAngle(float degree_angle)
+{
+	upperAngle = DEGREE_TO_RADIAN(degree_angle);
+}
+
+void GamRevoluteJoint::setEnableLimit(bool b)
+{
+	enableLimit = b;
+}
+
+void GamRevoluteJoint::setMaxMotorTorque(float torque)
+{
+	maxMotorTorque = torque;
+}
+
+void GamRevoluteJoint::setMotorSpeed(float speed)
+{
+	motorSpeed = speed;
+}
+
+void GamRevoluteJoint::setEnableMotor(bool b)
+{
+	enableMotor = b;
+}
+
+void GamRevoluteJoint::addToWorld(GamWorld *w)
+{
+	b2World *world = w->world;
+	b2RevoluteJoint *j = (b2RevoluteJoint *)world->CreateJoint(this);
+	joint = j;
+	joint->SetUserData(body_userdata);
+}
+
+//========================================== GamPrismaticJoint ===============================================//
+GamPrismaticJoint::GamPrismaticJoint(GamObject *o1, GamObject *o2)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	fprintf(stderr, "GamPrismaticJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n",
+			bodyA->GetPosition().x, bodyA->GetPosition().y,
+			bodyB->GetPosition().x, bodyB->GetPosition().y);
+	b2Vec2 worldAxis(1.0f, 0.0f);
+	Initialize(bodyA, bodyB, bodyA->GetPosition(), worldAxis);
+	lowerTranslation = -5.0f;
+	upperTranslation = 2.5f;
+	enableLimit = true;
+	maxMotorForce = 1.0f;
+	motorSpeed = 0.0f;
+	enableMotor = true;
+	setTag(GamPrismaticJointTag);
+}
+
+void GamPrismaticJoint::addToWorld(GamWorld *w)
+{
+	b2World *world = w->world;
+	b2PrismaticJoint *j = (b2PrismaticJoint *)world->CreateJoint(this);
+	joint = j;
+}
+
+//========================================== GamPulleyJoint ===============================================//
+GamPulleyJoint::GamPulleyJoint(GamObject *o1, GamObject *o2)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	if (bodyA == NULL || bodyB == NULL) {
+		fprintf(stderr, "GamRulleyJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
+		return;
+	}
+	b2Vec2 posA = bodyA->GetPosition();
+	b2Vec2 posB = bodyB->GetPosition();
+	fprintf(stderr, "GamPulleyJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n", posA.x, posA.y, posB.x, posB.y);
+	b2Vec2 anchorA = posA;
+	b2Vec2 anchorB = posB;
+	b2Vec2 groundAnchorA(posA.x, posA.y - 100/PTM_RATIO);
+	b2Vec2 groundAnchorB(posB.x, posB.y - 100/PTM_RATIO);
+	float32 ratio = 1.0f;
+	Initialize(bodyA, bodyB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio);
+	QGraphicsLineItem *i = dynamic_cast<QGraphicsLineItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
+	setTag(GamPulleyJointTag);
+}
+
+void GamPulleyJoint::addToWorld(GamWorld *w)
+{
+	b2World *world = w->world;
+	b2PulleyJoint *j = (b2PulleyJoint *)world->CreateJoint(this);
+	joint = j;
+}
+
+//========================================== GamGearJoint ===============================================//
+GamGearJoint::GamGearJoint(GamObject *o1, GamJoint *j1, GamObject *o2, GamJoint *j2)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	fprintf(stderr, "GamGearJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n",
+			bodyA->GetPosition().x, bodyA->GetPosition().y,
+			bodyB->GetPosition().x, bodyB->GetPosition().y);
+	this->bodyA = bodyA;
+	this->bodyB = bodyB;
+	joint1 = j1->joint;
+	joint2 = j2->joint;
+	float length = 100 / PTM_RATIO;
+	ratio = 2 * M_PI / length;
+	setTag(GamGearJointTag);
+}
+
+void GamGearJoint::addToWorld(GamWorld *w)
+{
+	b2World *world = w->world;
+	b2GearJoint *j = (b2GearJoint *)world->CreateJoint(this);
+	joint = j;
+}
+
+//===================================== Written by Takuma Wakamori ===========================================//
 #include <del_interface.hpp>
-//====================== Written by Takuma Wakamori =========================//
 
 #ifdef __cplusplus
 extern "C" {

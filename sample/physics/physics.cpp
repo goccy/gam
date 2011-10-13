@@ -9,7 +9,7 @@ PhysicsWorld::PhysicsWorld(void)
 	connect(world, SIGNAL(endContact(GamObject *, GamObject *)),
 			this, SLOT(endContactEvent(GamObject *, GamObject *)));
 	scene->setSceneRect(0, 0, 600, 600);
-	//scene->setBackgroundBrush(QColor("black"));
+	scene->setBackgroundBrush(QColor("black"));
 }
 
 void PhysicsWorld::addStaticObject(void)
@@ -25,8 +25,8 @@ void PhysicsWorld::addStaticObject(void)
 	right_block->setGraphicsEffect(new QGraphicsDropShadowEffect());
 	GamEllipse *e = new GamEllipse();
 	e->setRectShape(new GamRect(300, 300, 20, 20));
-	e->setBrush(QColor("#999900"));
-	//e->setGlow();
+	e->setBrush(QColor("#0000ff"));
+	e->setGlow();
 	ground->setRestitution(0);
 	scene->addItem(ground);
 	scene->addItem(left_block);
