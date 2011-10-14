@@ -375,6 +375,9 @@ class GamDistanceJoint : public b2DistanceJointDef, public QGraphicsLineItem,
 public:
 
 	GamDistanceJoint(GamObject *o1, GamObject *o2);
+	GamDistanceJoint(GamObject *o1, const GamPoint &p1, GamObject *o2, const GamPoint &p2);
+	void setLocalAnchorA(const GamPoint &p);
+	void setLocalAnchorB(const GamPoint &p);
 	void setFrequencyHz(float frequency);
 	void setDampingRatio(float ratio);
 	void setLength(float length);
@@ -387,6 +390,9 @@ class GamRevoluteJoint : public b2RevoluteJointDef, public QGraphicsLineItem,
 public:
 
 	GamRevoluteJoint(GamObject *o1, GamObject *o2);
+	GamRevoluteJoint(GamObject *o1, GamObject *o2, const GamPoint &anchor);
+	void setLocalAnchorA(const GamPoint &p);
+	void setLocalAnchorB(const GamPoint &p);
 	void setLowerAngle(float angle);
 	void setUpperAngle(float angle);
 	void setEnableLimit(bool b);

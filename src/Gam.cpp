@@ -1293,6 +1293,41 @@ GamDistanceJoint::GamDistanceJoint(GamObject *o1, GamObject *o2)
 	setTag(GamDistanceJointTag);
 }
 
+GamDistanceJoint::GamDistanceJoint(GamObject *o1, const GamPoint &p1, GamObject *o2, const GamPoint &p2)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	if (bodyA == NULL || bodyB == NULL) {
+		fprintf(stderr, "GamDistanceJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
+		return;
+	}
+	b2Vec2 posA(p1.x/PTM_RATIO, p1.y/PTM_RATIO);
+	b2Vec2 posB(p2.x/PTM_RATIO, p2.y/PTM_RATIO);
+	fprintf(stderr, "GamDistanceJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n", posA.x, posA.y, posB.x, posB.y);
+	Initialize(bodyA, bodyB, posA, posB);
+	setLine(p1.x, p1.y, p2.x, p2.y);
+	collideConnected = true;
+	frequencyHz = 4.0f;
+	dampingRatio = 0.5f;
+	float distance = GET_DISTANCE(posA, posB);
+	length = distance;
+	QGraphicsLineItem *i = dynamic_cast<QGraphicsLineItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
+	setTag(GamDistanceJointTag);
+}
+
+void GamDistanceJoint::setLocalAnchorA(const GamPoint &p)
+{
+	localAnchorA = b2Vec2(p.x/PTM_RATIO, p.y/PTM_RATIO);
+}
+
+void GamDistanceJoint::setLocalAnchorB(const GamPoint &p)
+{
+	localAnchorB = b2Vec2(p.x/PTM_RATIO, p.y/PTM_RATIO);
+}
+
 void GamDistanceJoint::setFrequencyHz(float frequency)
 {
 	frequencyHz = frequency;
@@ -1348,6 +1383,42 @@ GamRevoluteJoint::GamRevoluteJoint(GamObject *o1, GamObject *o2)
 	GamObject *o = (GamObject *)this;
 	setBodyUserData(o);
 	setTag(GamRevoluteJointTag);
+}
+
+GamRevoluteJoint::GamRevoluteJoint(GamObject *o1, GamObject *o2, const GamPoint &anchor)
+{
+	b2Body *bodyA = getBody(o1);
+	b2Body *bodyB = getBody(o2);
+	if (bodyA == NULL || bodyB == NULL) {
+		fprintf(stderr, "GamRevoluteJoint: ERROR!!, Please call GamWorld.add(GamObject o) previously.\n");
+		return;
+	}
+	b2Vec2 posA = bodyA->GetPosition();
+	b2Vec2 posB = bodyB->GetPosition();
+	fprintf(stderr, "GamRevoluteJoint: bodyA = (%f, %f) : bodyB = (%f, %f)\n", posA.x, posA.y, posB.x, posB.y);
+	Initialize(bodyA, bodyB, b2Vec2(anchor.x/PTM_RATIO, anchor.y/PTM_RATIO));
+	setLine(posA.x * PTM_RATIO, posA.y * PTM_RATIO, posB.x * PTM_RATIO, posB.y * PTM_RATIO);
+	lowerAngle = DEGREE_TO_RADIAN(-90);
+	upperAngle = DEGREE_TO_RADIAN(45);
+	enableLimit = true;
+	maxMotorTorque = 10.0f;
+	motorSpeed = 0.0f;
+	enableMotor = true;
+	QGraphicsLineItem *i = dynamic_cast<QGraphicsLineItem *>(this);
+	body_userdata->i = i;
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
+	setTag(GamRevoluteJointTag);
+}
+
+void GamRevoluteJoint::setLocalAnchorA(const GamPoint &p)
+{
+	localAnchorA = b2Vec2(p.x/PTM_RATIO, p.y/PTM_RATIO);
+}
+
+void GamRevoluteJoint::setLocalAnchorB(const GamPoint &p)
+{
+	localAnchorB = b2Vec2(p.x/PTM_RATIO, p.y/PTM_RATIO);
 }
 
 void GamRevoluteJoint::setLowerAngle(float degree_angle)
