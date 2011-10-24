@@ -43,15 +43,18 @@ void AR::timerEvent(QTimerEvent *event)
 	int objs_size = objs->length();
 	int list_size = prev_list->length();
 	for (int i = 0; i < list_size; i++) {
+		scene->removeItem(prev_list->at(i));
 		world->remove(prev_list->at(i));
 	}
 	prev_list->clear();
 	scene->addItem(t);
 	for (int i = 0; i < objs_size; i++) {
 		std::vector<Vec2f> obj = objs->at(i);
+		fprintf(stderr, "obj_size = [%d]\n", obj.size());
 		GamComplexItem *item = new GamComplexItem(obj, obj.size());
 		item->setColor(&QColor("#00ff00"));
 		item->setBullet(true);
+		scene->addItem(item);
 		world->add(item);
 		prev_list->append(item);
 	}

@@ -310,10 +310,12 @@ void GamText::addToWorld(GamWorld *w)
 }
 
 //================================== ComplexItem =============================================//
-GamComplexItem::GamComplexItem(const std::vector<Vec2f> &pts, int size)
+GamComplexItem::GamComplexItem(const GamVector &pts)
 {
 	x = 0;
 	y = 0;
+	int size = pts.size();
+	if (size < 3) return;
 	std::vector<Triangle> tris = triangulate(pts, (float)size);
 	gp_list = new QList<QGraphicsPolygonItem *>();
 	for (std::vector<Triangle>::iterator triIt = tris.begin(); triIt != tris.end(); ++triIt) {
@@ -329,6 +331,21 @@ GamComplexItem::GamComplexItem(const std::vector<Vec2f> &pts, int size)
 		addToGroup(gp);
 		//fprintf(stderr, "(%f, %f), (%f, %f), (%f, %f)\n", triIt->a.x, triIt->a.y, triIt->b.x, triIt->b.y, triIt->c.x, triIt->c.y);
 	}
+	isDrag = false;
+	setTag(GamComplexItemTag);
+	setObjectName("GamComplexItem");
+	isStatic = true;
+	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
+	body_userdata->i = i;
+	body_userdata->setTag(GamComplexItemTag);
+	GamObject *o = (GamObject *)this;
+	setBodyUserData(o);
+}
+
+GamComplexItem::GamComplexItem(void)
+{
+	x = 0;
+	y = 0;
 	isDrag = false;
 	setTag(GamComplexItemTag);
 	setObjectName("GamComplexItem");
@@ -452,7 +469,7 @@ GamTexture::GamTexture(const char *filepath_)
 	ce = new QGraphicsColorizeEffect();
 	setConnect();
 	isStatic = true;
-	ipl = NULL;
+	ipl = cvLoadImage(filepath_, CV_LOAD_IMAGE_COLOR);
 	setTag(GamTextureTag);
 	QGraphicsItem *i = dynamic_cast<QGraphicsItem *>(this);
 	body_userdata->i = i;
@@ -463,8 +480,8 @@ GamTexture::GamTexture(const char *filepath_)
 
 GamTexture::GamTexture(QImage *image)
 {
-	p = new QPixmap();
-	QPixmap pixmap = p->fromImage(*image);
+	p = NULL;
+	QPixmap pixmap = QPixmap::fromImage(*image);
 	setPixmap(pixmap);
 	isDrag = false;
 	setObjectName("GamTexture");
@@ -1082,6 +1099,11 @@ void GamWorld::timerEvent(QTimerEvent *event)
 
 
 //===================================== GamCapture =============================================//
+GamCapture::GamCapture(void)
+{
+	capture = NULL;
+}
+
 QImage *GamCapture::convertFromIplImageToQImage(const IplImage * iplImage, double mini, double maxi)
 {
 	int width = iplImage->width;
