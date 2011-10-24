@@ -1,7 +1,27 @@
 Gam is library for Game Creator & Deigital Signage Developer
 
-### Dependencies : Qt(ver 4.7), Box2D, OpenCV ####
+### Dependencies : Qt(ver 4.7), Box2D, OpenCV, OpenNI, NITE ####
 $ git clone git@github.com:goccy/gam.git
+$ cd gam
+
+(1) Please install Box2D library
+$ cd lib/Box2D
+$ mkdir build
+$ cd build
+$ cmake ../
+$ make && make install
+
+(2) Please install Qt4 library
+/* This library needs QtOpenGL.*/
+
+(3) Please install OpenCV & OpenNI
+
+(4) Please install NITE
+/* If your os is MacOSX */
+$ cd lib/NITE
+$ sudo ./install.sh /* copied to /usr/include/nite & /usr/lib/libXnV~.dylib */
+
+(5) Building & Install
 $ cd gam
 $ mkdir build
 $ cd build
@@ -12,6 +32,6 @@ $ make install
 
 ### Hello Gam Application
 $ cd sample/physics
-$ gamake
+$ gamake /* generates Makefile */
 $ make
 $ open physics.app or ./physics.exe

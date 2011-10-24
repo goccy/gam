@@ -16,7 +16,12 @@ set(PACKAGE_SOURCE_CODE
 	src/Gam.cpp
 	src/GamGL.cpp
 	src/GamKinect.cpp
-	include/moc_gam.cxx)
+	include/moc_gam.cxx
+	lib/triangle++/src/assert.cpp
+	lib/triangle++/src/del_impl.cpp
+	lib/triangle++/src/main.cpp
+)
+
 
 set(PACKAGE_HEADERS include/gam.hpp)
 qt4_wrap_cpp(PACKAGE_HEADERS_MOC ${PACKAGE_HEADERS})
@@ -82,11 +87,6 @@ endif()
 
 set(NITE_LIBRARIES -lXnVCNITE -lXnVNite)
 
-add_library(triangle
-	lib/triangle++/src/assert.cpp
-	lib/triangle++/src/del_impl.cpp
-	lib/triangle++/src/main.cpp)
-
 add_library(${PACKAGE_NAME} SHARED ${PACKAGE_SOURCE_CODE} ${PACKAGE_HEADERS_MOC})
 
 set_target_properties(${PACKAGE_NAME} PROPERTIES PREFIX "")
@@ -97,7 +97,7 @@ endif(NOT OPENGL_FOUND)
 #MESSAGE(${PACKAGE_EXTRA_LIBRARY})
 #MESSAGE(${OPENGL_LIBRARIES})
 
-target_link_libraries(${PACKAGE_NAME} ${PACKAGE_EXTRA_LIBRARY} ${OPENGL_LIBRARIES} triangle
+target_link_libraries(${PACKAGE_NAME} ${PACKAGE_EXTRA_LIBRARY} ${OPENGL_LIBRARIES}
 Box2D opencv_calib3d opencv_core opencv_features2d opencv_flann opencv_gpu
 opencv_highgui opencv_imgproc opencv_legacy opencv_ml
 opencv_objdetect opencv_ts opencv_video OpenNI ${NITE_LIBRARIES})
