@@ -39,8 +39,8 @@ GestureWidget::GestureWidget(void)
 	scene->addItem(left_wall);
 	scene->addItem(right_wall);
 	kinect = new GamKinect("Sample-Tracking.xml");
-	GamTexture *background = new GamTexture("flower.jpg");
-	//kinect->setBackgroundTexture(background);
+	GamTexture *background = new GamTexture("sky.jpg");
+	kinect->setBackgroundTexture(background);
 	connect(kinect, SIGNAL(startSessionSignal(const XnPoint3D, void *)),
 			this, SLOT(startSession(const XnPoint3D, void *)));
 	connect(kinect, SIGNAL(endSessionSignal(void *)),
@@ -78,8 +78,8 @@ void GestureWidget::timerEvent(QTimerEvent *event)
 		prev_people = NULL;
 	}
 	added_persons->clear();
-	GamTexture *t = kinect->queryFrame();
-	//GamTexture *t = kinect->queryBlendFrame();
+	//GamTexture *t = kinect->queryFrame();
+	GamTexture *t = kinect->queryBlendFrame();
 	//t->setRectShape(&GamRect(0, 0, 1920, 1200));
 	scene->addItem(t);
 	GamPeople *people = kinect->getPeople();

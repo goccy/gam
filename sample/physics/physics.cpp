@@ -24,7 +24,7 @@ void PhysicsWorld::addStaticObject(void)
 	right_block->setBrush(*static_block_color);
 	right_block->setGraphicsEffect(new QGraphicsDropShadowEffect());
 	GamEllipse *e = new GamEllipse();
-	e->setRectShape(new GamRect(300, 300, 20, 20));
+	e->setRectShape(&GamRect(300, 300, 20, 20));
 	e->setBrush(QColor("#0000ff"));
 	e->setGlow();
 	ground->setRestitution(0);
@@ -52,7 +52,7 @@ void PhysicsWorld::addDynamicObject(void)
 		scene->addItem(rect);
 	}
 	GamEllipse *e = new GamEllipse();
-	e->setRectShape(new GamRect(250, 300, 30, 30));
+	e->setRectShape(&GamRect(250, 300, 30, 30));
 	e->setBrush(QColor("#eeee00"));
 	e->setDensity(1.0);
 	//e->setGlow();
@@ -60,7 +60,7 @@ void PhysicsWorld::addDynamicObject(void)
 	text->setPosition(300, 100);
 	text->setDensity(1.0);
 	GamTexture *texture = new GamTexture("qt.jpg");
-	texture->setRectShape(new GamRect(200, 200, 50, 50));
+	texture->setRectShape(&GamRect(200, 200, 50, 50));
 	texture->setDensity(1);
 	world->add(e);
 	scene->addItem(e);

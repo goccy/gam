@@ -16,20 +16,6 @@
 #include <iostream>
 #define PTM_RATIO 32.0f
 
-class Vec2f {
-public:
-	float x;
-	float y;
-	Vec2f() {
-		this->x = 0;
-		this->y = 0;
-	};
-	Vec2f(float x, float y) {
-		this->x = x;
-		this->y = y;
-	}
-};
-
 typedef enum {
 	GamRectTag,
 	GamEllipseTag,
@@ -48,6 +34,14 @@ typedef enum {
 	//GamRopeJointTag,
 	//GamFrictionJointTag,
 } GamClassDef;
+
+class Vec2f {
+public:
+	float x;
+	float y;
+	Vec2f() : x(0), y(0) {};
+	Vec2f(float x, float y) : x(x), y(y) {}
+};
 
 class GamObject {
 private:
@@ -172,7 +166,6 @@ class GamTexture;
 class GamRect : public QObject, public GamObject, public QGraphicsRectItem, public GamRigidBody {
 	Q_OBJECT;
 public:
-	QRect *r;
 	bool isDrag;
 	int x;
 	int y;
@@ -236,11 +229,10 @@ public:
 	GamTexture(QImage *image);
 	GamTexture(QPixmap *image);
 	void setTrackData(const char *filepath);
-	void setConnect(void);
 	QList<GamVector> *detectHuman(GamTexture *background);
 	QList<GamTexture*> *split(int row, int col);
 	void setRectShape(GamRect *r);
-	void setColor(QColor *c);
+	void setColor(const QColor &c);
 	GamPoint *getCenter(void);
 	void setSize(float width, float height);
 	~GamTexture(void);
@@ -293,16 +285,6 @@ signals:
 	void dragEndSignal(QGraphicsSceneMouseEvent *event);
 };
 
-static inline int match(const char *base, const char *target)
-{
-	int ret = 0;
-	if (strlen(base) == strlen(target) &&
-		!strncmp(base, target, strlen(target))) {
-		ret = 1;
-	}
-	return ret;
-}
-
 class GamTimer : public QObject, public GamObject {
 };
 
@@ -340,7 +322,7 @@ public:
 	GamComplexItem(const GamVector &pts);
 	GamComplexItem(void);
 	void setPosition(int x, int y);
-	void setColor(QColor *c);
+	void setColor(const QColor &c);
 	void mousePressEvent(QGraphicsSceneMouseEvent *event);
 	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
 	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);

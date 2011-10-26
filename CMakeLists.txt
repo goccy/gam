@@ -13,13 +13,15 @@ find_package(Qt4 REQUIRED)
 set(QT_USE_QTOPENGL TRUE)
 
 set(PACKAGE_SOURCE_CODE
-	src/Gam.cpp
-	src/GamGL.cpp
-	src/GamKinect.cpp
-	include/moc_gam.cxx
 	lib/triangle++/src/assert.cpp
 	lib/triangle++/src/del_impl.cpp
 	lib/triangle++/src/main.cpp
+	src/Gam.cpp
+	src/GamGL.cpp
+	src/GamJoint.cpp
+	src/GamKinect.cpp
+	src/GamTriangle.cpp
+	include/moc_gam.cxx
 )
 
 

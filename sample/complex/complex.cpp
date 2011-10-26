@@ -15,8 +15,8 @@ int main(int argc, char **argv)
 	for (int i = 0; i < size; i++) {
 		pts.push_back(Vec2f(xarray[i], yarray[i]));
 	}
-	GamComplexItem c(pts, size);
-	c.setColor(new QColor("blue"));
+	GamComplexItem c(pts);
+	c.setColor(QColor("blue"));
 	c.setDensity(1);
 	world.add(&c);
 	scene.addItem(&c);
