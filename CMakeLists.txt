@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
-set(CMAKE_C_FLAGS_RELEASE "-Wall -O0 -g3")
-set(CMAKE_C_FLAGS_DEBUG   "-Wall -O0 -g3")
-set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O2 -g")
-set(CMAKE_CXX_FLAGS_DEBUG   "-Wall -O0 -g3")
+set(CMAKE_C_FLAGS_RELEASE "-Wall -Wunknown-pragmas -O0 -g3")
+set(CMAKE_C_FLAGS_DEBUG   "-Wall -Wunknown-pragmas -O0 -g3")
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -Wunknown-pragmas -O0 -g3")
+set(CMAKE_CXX_FLAGS_DEBUG   "-Wall -Wunknown-pragmas -O0 -g3")
 set(CMAKE_BUILD_TYPE Release)
 
 project(libgam)
@@ -13,9 +13,18 @@ find_package(Qt4 REQUIRED)
 set(QT_USE_QTOPENGL TRUE)
 
 set(PACKAGE_SOURCE_CODE
+	lib/triangle++/src/assert.cpp
+	lib/triangle++/src/del_impl.cpp
+	lib/triangle++/src/main.cpp
 	src/Gam.cpp
 	src/GamGL.cpp
-	include/moc_gam.cxx)
+	src/GamJoint.cpp
+	src/GamKinect.cpp
+	src/GamTriangle.cpp
+	src/GamWobble.cpp
+	include/moc_gam.cxx
+)
+
 
 set(PACKAGE_HEADERS include/gam.hpp)
 qt4_wrap_cpp(PACKAGE_HEADERS_MOC ${PACKAGE_HEADERS})
@@ -28,6 +37,7 @@ set(PACKAGE_EXTRA_LIBRARY
 	${QT_QTOPENGL_LIBRARY}
 	${QT_QTGUI_LIBRARY}
 	)
+
 
 set(PACKAGE_NAME    ${PROJECT_NAME})
 set(PACKAGE_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
@@ -66,10 +76,19 @@ if(HAVE_OPENCV)
     include_directories(${HAVE_OPENCV}/opencv2)
 endif()
 
-add_library(triangle
-	lib/triangle++/src/assert.cpp
-	lib/triangle++/src/del_impl.cpp
-	lib/triangle++/src/main.cpp)
+find_path(HAVE_OPENNI ni/XnOpenNI.h PATHS ${include_locations})
+if(HAVE_OPENNI)
+    add_definitions(-DGAM_USING_OPENNI=1)
+    include_directories(${HAVE_OPENNI}/ni)
+endif()
+
+find_path(HAVE_NITE nite/XnVNite.h PATHS ${include_locations})
+if(HAVE_NITE)
+    add_definitions(-DGAM_USING_NITE=1)
+    include_directories(${HAVE_NITE}/nite)
+endif()
+
+set(NITE_LIBRARIES -lXnVCNITE -lXnVNite)
 
 add_library(${PACKAGE_NAME} SHARED ${PACKAGE_SOURCE_CODE} ${PACKAGE_HEADERS_MOC})
 
@@ -81,10 +100,10 @@ endif(NOT OPENGL_FOUND)
 #MESSAGE(${PACKAGE_EXTRA_LIBRARY})
 #MESSAGE(${OPENGL_LIBRARIES})
 
-target_link_libraries(${PACKAGE_NAME} ${PACKAGE_EXTRA_LIBRARY} ${OPENGL_LIBRARIES} triangle
+target_link_libraries(${PACKAGE_NAME} ${PACKAGE_EXTRA_LIBRARY} ${OPENGL_LIBRARIES}
 Box2D opencv_calib3d opencv_core opencv_features2d opencv_flann opencv_gpu
 opencv_highgui opencv_imgproc opencv_legacy opencv_ml
-opencv_objdetect opencv_ts opencv_video)
+opencv_objdetect opencv_ts opencv_video OpenNI ${NITE_LIBRARIES})
 
 set(GAM_PACKAGE_DIR gam)
 install(TARGETS ${PACKAGE_NAME} DESTINATION lib)

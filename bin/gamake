@@ -29,10 +29,10 @@ open(OUT, "> tmp.mk");
 while ($line = <IN>) {
 	if ($line =~ /INCPATH/) {
 		$line =~ s/\n//g;
-		$line .= " -I/usr/local/include/ -I/usr/local/include/opencv/ -I/usr/local/include/Box2D/\n";
+		$line .= " -I/usr/local/include/ -I/usr/local/include/opencv/ -I/usr/local/include/Box2D/ -I/usr/include/ni -I/usr/include/nite/\n";
 	} elsif ($line =~ /LIBS/) {
 		$line =~ s/\n//g;
-		$line .= " -L/usr/local/lib/ -lgam\n";
+		$line .= " -L/usr/local/lib/ -lgam -lOpenNI\n";
 	}
 	print(OUT $line);
 }

@@ -1,24 +1,20 @@
+/*=============== QT ====================*/
 #include <QtGui>
+/*============== Box2D ==================*/
 #include <Box2D.h>
+/*============== OpenCV =================*/
 #include <cv.h>
 #include <highgui.h>
-
+/*========== OpenNI & NITE ==============*/
+#define warning(msg) //for escape OpenNI's warning
+#include <XnOpenNI.h>
+#include <XnVPointControl.h>
+#include <XnVSessionManager.h>
+#include <XnVPushDetector.h>
+#include <XnVSwipeDetector.h>
+/*========================================*/
 #include <iostream>
 #define PTM_RATIO 32.0f
-
-class Vec2f {
-public:
-	float x;
-	float y;
-	Vec2f() {
-		this->x = 0;
-		this->y = 0;
-	};
-	Vec2f(float x, float y) {
-		this->x = x;
-		this->y = y;
-	}
-};
 
 typedef enum {
 	GamRectTag,
@@ -27,6 +23,7 @@ typedef enum {
 	GamTextTag,
 	GamLineTag,
 	GamComplexItemTag,
+	GamWobbleItemTag,
 	GamDistanceJointTag,
 	GamRevoluteJointTag,
 	GamPrismaticJointTag,
@@ -39,12 +36,31 @@ typedef enum {
 	//GamFrictionJointTag,
 } GamClassDef;
 
+extern QPainterPath *g_path;
+
+class Vec2f {
+public:
+	float x;
+	float y;
+	Vec2f() : x(0), y(0) {};
+	Vec2f(float x, float y) : x(x), y(y) {}
+};
+
+typedef std::vector<Vec2f> GamVector;
+
+class GamVectorIdx {
+public:
+	int idx;
+	GamVector vec;
+};
+
 class GamObject {
 private:
 	int _tag;
 public:
 	QGraphicsItem *i;
 	void *userdata;
+	int idx;/* for wobble effect */
 
 	GamObject(void);
 	int tag(void);
@@ -109,6 +125,7 @@ public:
     void DrawAABB(b2AABB* aabb, const b2Color& color);
 };
 
+class GamWobble;
 class GamWorld : public QObject, public GamObject {
 	Q_OBJECT;
 public:
@@ -121,14 +138,18 @@ public:
 	b2Body *mouse_joint_body;
 	b2MouseJoint *mouse_joint;
 	GamGL *debugDraw;
+	GamWobble *wobble;
 
 	GamWorld(GamScene *scene);
 	void add(GamObject *o);
 	void remove(GamObject *o);
 	void start(void);
 	void joint(void);
+	void wobbleEffect(int base_idx, b2Body *body, QList<GamVectorIdx> *vec_list);
 	void timerEvent(QTimerEvent *event);
+	void setGravity(float x, float y);
 signals:
+	void emitUpdatePointSignal(QList<GamVectorIdx> *pts);
 	void beginContact(GamObject *o1, GamObject *o2);
 	void endContact(GamObject *o1, GamObject *o2);
 public slots:
@@ -162,7 +183,6 @@ class GamTexture;
 class GamRect : public QObject, public GamObject, public QGraphicsRectItem, public GamRigidBody {
 	Q_OBJECT;
 public:
-	QRect *r;
 	bool isDrag;
 	int x;
 	int y;
@@ -172,6 +192,7 @@ public:
 	b2Body *body;
 
 	GamRect(int x, int y, int width, int height);
+	void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *w);
 	void mousePressEvent(QGraphicsSceneMouseEvent *event);
 	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
 	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
@@ -198,16 +219,24 @@ public:
 	QColor *color;
 	b2Body *body;
 	bool glow;
+	bool waterFlag;
 
 	GamEllipse();
 	void setRectShape(GamRect *r);
 	void setPosition(int x_, int y_);
+	void convertToWater(void);
 	void setGlow(void);
 	void setGlowCenterColor(QColor *color);
 	void addToWorld(GamWorld *w);
+	void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *w);
+	void mousePressEvent(QGraphicsSceneMouseEvent *event);
+	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+signals:
+	void dragBeginSignal(QGraphicsSceneMouseEvent *event);
+	void dragMoveSignal(QGraphicsSceneMouseEvent *event);
+	void dragEndSignal(QGraphicsSceneMouseEvent *event);
 };
-
-typedef std::vector<Vec2f> GamVector;
 
 class GamTexture : public QObject, public GamObject, public QGraphicsPixmapItem, public GamRigidBody {
 	Q_OBJECT;
@@ -226,15 +255,15 @@ public:
 	GamTexture(QImage *image);
 	GamTexture(QPixmap *image);
 	void setTrackData(const char *filepath);
-	void setConnect(void);
 	QList<GamVector> *detectHuman(GamTexture *background);
 	QList<GamTexture*> *split(int row, int col);
 	void setRectShape(GamRect *r);
-	void setColor(QColor *c);
+	void setColor(const QColor &c);
 	GamPoint *getCenter(void);
 	void setSize(float width, float height);
 	~GamTexture(void);
 	void addToWorld(GamWorld *w);
+	void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *w);
 };
 
 class GamLine : public QObject, public GamObject, public QGraphicsLineItem, public GamRigidBody {
@@ -271,9 +300,47 @@ public:
 	void addToWorld(GamWorld *w);
 };
 
+class GamScene;
+class GamView : public QGraphicsView {
+public:
+	GamScene *scene;
+	bool renderFlag;
+	GamWobble *wobble;
+	bool waterRendering;
+
+	GamView(GamScene *scene);
+	void setGLRendering(bool b);
+	void setWaterRendering(bool b);
+	void paintEvent(QPaintEvent *event);
+};
+
+class GamWobble : public QGLWidget {
+	Q_OBJECT;
+public:
+	GamView *view;
+	GamScene *scene;
+	QList<GamVectorIdx> *pts;
+	int width;
+	int height;
+	int ripple_count;
+
+	GamWobble(QWidget *parent);
+	void initializeGL(void);
+	void paintGL(void);
+	void resizeGL(int width, int height);
+	void rippleEffect(QPainter *painter);
+	void wobbleEffect(QPainter *painter);
+	void draw(void);
+public slots:
+	void updatePoint(QList<GamVectorIdx> *pts);
+};
+
 class GamScene : public QGraphicsScene {
 	Q_OBJECT;
 public:
+	GamWobble *wobble;
+	GamScene();
+	void paintEvent(QPaintEvent *event);
 	void mousePressEvent(QGraphicsSceneMouseEvent *event);
 	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
 	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
@@ -282,16 +349,6 @@ signals:
 	void dragMoveSignal(QGraphicsSceneMouseEvent *event);
 	void dragEndSignal(QGraphicsSceneMouseEvent *event);
 };
-
-static inline int match(const char *base, const char *target)
-{
-	int ret = 0;
-	if (strlen(base) == strlen(target) &&
-		!strncmp(base, target, strlen(target))) {
-		ret = 1;
-	}
-	return ret;
-}
 
 class GamTimer : public QObject, public GamObject {
 };
@@ -327,9 +384,10 @@ public:
 	int height;
 	b2Body *body;
 
-	GamComplexItem(const std::vector<Vec2f> &pts, int size);
+	GamComplexItem(const QList<QPointF> &pts);
+	GamComplexItem(void);
 	void setPosition(int x, int y);
-	void setColor(QColor *c);
+	void setColor(const QColor &c);
 	void mousePressEvent(QGraphicsSceneMouseEvent *event);
 	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
 	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
@@ -345,6 +403,7 @@ class GamCapture {
 public:
 	CvCapture *capture;
 
+	GamCapture(void);
 	QImage *convertFromIplImageToQImage(const IplImage *ipl, double min, double max);
 	GamTexture *queryFrame(void);
 	~GamCapture(void);
@@ -375,11 +434,15 @@ class GamDistanceJoint : public b2DistanceJointDef, public QGraphicsLineItem,
 public:
 
 	GamDistanceJoint(GamObject *o1, GamObject *o2);
+	GamDistanceJoint(GamObject *o1, const GamPoint &p1, GamObject *o2, const GamPoint &p2);
+	void setLocalAnchorA(const GamPoint &p);
+	void setLocalAnchorB(const GamPoint &p);
 	void setFrequencyHz(float frequency);
 	void setDampingRatio(float ratio);
 	void setLength(float length);
 	void setCollideConnected(bool b);
 	void addToWorld(GamWorld *world);
+	void paint(QPainter *p, const QStyleOptionGraphicsItem *op, QWidget *widget);
 };
 
 class GamRevoluteJoint : public b2RevoluteJointDef, public QGraphicsLineItem,
@@ -387,6 +450,9 @@ class GamRevoluteJoint : public b2RevoluteJointDef, public QGraphicsLineItem,
 public:
 
 	GamRevoluteJoint(GamObject *o1, GamObject *o2);
+	GamRevoluteJoint(GamObject *o1, GamObject *o2, const GamPoint &anchor);
+	void setLocalAnchorA(const GamPoint &p);
+	void setLocalAnchorB(const GamPoint &p);
 	void setLowerAngle(float angle);
 	void setUpperAngle(float angle);
 	void setEnableLimit(bool b);
@@ -396,18 +462,25 @@ public:
 	void addToWorld(GamWorld *world);
 };
 
-class GamPrismaticJoint : public b2PrismaticJointDef, public GamObject, public GamJoint {
+class GamPrismaticJoint : public b2PrismaticJointDef, public QGraphicsLineItem,
+						  public GamObject, public GamJoint {
 public:
 
 	GamPrismaticJoint(GamObject *o1, GamObject *o2);
+	void setLowerTranslation(float translation);
+	void setUpperTranslation(float translation);
+	void setEnableLimit(bool b);
+	void setMaxMotorForce(float force);
+	void setMotorSpeed(float speed);
+	void setEnableMotor(bool b);
 	void addToWorld(GamWorld *world);
 };
 
-class GamPulleyJoint : public b2PulleyJointDef, public QGraphicsLineItem,
+class GamPulleyJoint : public b2PulleyJointDef, public QGraphicsPathItem,
 					   public GamObject, public GamJoint {
 public:
 
-	GamPulleyJoint(GamObject *o1, GamObject *o2);
+	GamPulleyJoint(GamObject *o1, const GamPoint &p1, GamObject *o2, const GamPoint &p2);
 	void addToWorld(GamWorld *world);
 };
 
@@ -418,4 +491,106 @@ public:
 	void addToWorld(GamWorld *world);
 };
 
-extern "C" std::vector<Triangle> triangulate(const std::vector<Vec2f> & points, float resolution);
+class XnVPointDrawer : public QObject, public XnVPointControl {
+	Q_OBJECT;
+public:
+	XnVPointDrawer(XnUInt32 nHistorySize, xn::DepthGenerator depthGenerator);
+	virtual ~XnVPointDrawer();
+	void Update(XnVMessage* pMessage);
+	void OnPointCreate(const XnVHandPointContext* cxt);
+	void OnPointUpdate(const XnVHandPointContext* cxt);
+	void OnPointDestroy(XnUInt32 nID);
+	void SetDepthMap(XnBool bDrawDM);
+	void SetFrameID(XnBool bFrameID);
+	void SetTouchingFOVEdge(XnUInt32 nID);
+	//void Draw() const;
+protected:
+	XnBool IsTouching(XnUInt32 nID) const;
+	XnUInt32 m_nHistorySize;
+	std::map<XnUInt32, std::list<XnPoint3D> > m_History;
+	std::list<XnUInt32> m_TouchingFOVEdge;
+	xn::DepthGenerator m_DepthGenerator;
+	XnFloat* m_pfPositionBuffer;
+	XnBool m_bDrawDM;
+	XnBool m_bFrameID;
+signals:
+	void updateHandPositionSignal(GamPoint p, float z);
+};
+
+class GamPerson : public GamComplexItem {//public QGraphicsItemGroup {
+private:
+	unsigned int label;
+public:
+
+	GamPerson(unsigned int label_, const QList<QPointF> &pts);
+	void addEdgePoint(const GamPoint &p);
+	void strokePath(void);
+	QList<GamPoint> *points(void);
+	~GamPerson(void);
+};
+
+class GamPeople {
+private:
+	unsigned int capacity;
+	unsigned int num;
+	QList<GamPerson *> *persons;
+public:
+	GamPeople(int max_num);
+	void addPerson(GamPerson *p);
+	unsigned int length(void);
+	GamPerson *getPerson(int n);
+	void clear(void);
+	~GamPeople(void);
+};
+
+class GamKinect : public QObject, public GamCapture {
+	Q_OBJECT;
+private:
+	XnVSessionManager *sessionManager;
+	XnVPushDetector *pushDetector;
+	XnVSwipeDetector *swipeDetector;
+	xn::Context *context;
+	xn::UserGenerator *userGenerator;
+	xn::ImageGenerator *imageGenerator;
+	xn::DepthGenerator *depthGenerator;
+	xn::HandsGenerator *handsGenerator;
+	xn::GestureGenerator *gestureGenerator;
+	xn::ImageMetaData *imageMD;
+	IplImage *iplImage;
+	XnVPointDrawer *drawer;
+	GamPeople *people;
+	IplImage *background_texture;
+	IplImage *blend_texture;
+	//XnUInt64 focalLength;
+	//XnDouble pixelSize;
+	//int uSize;
+	//int vSize;
+	//int uCenter;
+	//int vCenter;
+
+public:
+	GamKinect(const char *xmlpath);
+	GamTexture *queryFrame(void);
+	GamTexture *queryBlendFrame(void);
+	void setEdgePointToPeople(IplImage *image);
+	void startSessionHandler(const XnPoint3D &pFocus, void *ctx);
+	void endSessionHandler(void *ctx);
+	void pushHandler(XnFloat fVelocity, XnFloat fAngle, void *ctx);
+	void swipeHandler(XnFloat fVelocity, XnFloat fAngle, void *ctx);
+	void update(void);
+	void setBackgroundTexture(GamTexture *texture);
+	GamPeople *getPeople(void);
+	~GamKinect(void);
+signals:
+	void startSessionSignal(const XnPoint3D pFocus, void *ctx);
+	void endSessionSignal(void *ctx);
+	void pushSignal(XnFloat fVelocity, XnFloat fAngle, void *ctx);
+	void swipeSignal(XnFloat fVelocity, XnFloat fAngle, void *ctx);
+	void updateHandPositionSignal(GamPoint p, float z);
+	void foundPeopleSignal(GamPeople *people);
+public slots:
+	void updateHandPositionHandler(GamPoint p, float z);
+};
+
+extern "C" std::vector<Triangle> triangulate(const QList<QPointF> &points, float resolution);
+//extern "C" std::vector<Triangle> triangulate(const std::vector<Vec2f> &points, float resolution);
